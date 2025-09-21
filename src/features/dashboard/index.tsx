@@ -15,8 +15,16 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
 import { RecentSales } from './components/recent-sales'
+import { useRouter } from '@tanstack/react-router' // Import useRouter from TanStack
+
 
 export default function Dashboard() {
+  const router = useRouter() // Initialize TanStack router
+
+  const handleNewArticle = () => {
+    router.navigate({ to: '/articles' }) // Navigate to /articles using TanStack Router
+  }
+  
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -34,7 +42,7 @@ export default function Dashboard() {
         <div className='mb-2 flex items-center justify-between space-y-2'>
           <h1 className='text-2xl font-bold tracking-tight'>Editorial Dashboard</h1>
           <div className='flex items-center space-x-2'>
-            <Button>New Article</Button>
+            <Button onClick={handleNewArticle}>New Article</Button>
           </div>
         </div>
         <Tabs
@@ -46,8 +54,7 @@ export default function Dashboard() {
             <TabsList>
               <TabsTrigger value='overview'>Overview</TabsTrigger>
               <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-              <TabsTrigger value='calendar'>Editorial Calendar</TabsTrigger>
-              <TabsTrigger value='notifications'>Alerts</TabsTrigger>
+              <TabsTrigger value='calendar'>Schedule</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value='overview' className='space-y-4'>
@@ -192,26 +199,26 @@ export default function Dashboard() {
 const topNav = [
   {
     title: 'News Desk',
-    href: 'dashboard/overview',
+    href: '/dash',
     isActive: true,
     disabled: false,
   },
   {
-    title: 'Sports',
-    href: 'dashboard/sports',
+    title: 'Article Management',
+    href: '/articles/list',
     isActive: false,
     disabled: false,
   },
   {
-    title: 'Opinion',
-    href: 'dashboard/opinion',
+    title: 'Analytics',
+    href: '/maintenance',
     isActive: false,
     disabled: false,
   },
   {
     title: 'Settings',
-    href: 'dashboard/settings',
+    href: '/settings',
     isActive: false,
-    disabled: true,
+    disabled: false,
   },
-]
+];

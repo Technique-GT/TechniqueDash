@@ -26,14 +26,23 @@ import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authen
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedMaintenanceIndexRouteImport } from './routes/_authenticated/maintenance/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedDashIndexRouteImport } from './routes/_authenticated/dash/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
+import { Route as AuthenticatedArticlesIndexRouteImport } from './routes/_authenticated/articles/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedMaintenanceSpotifyRouteImport } from './routes/_authenticated/maintenance/spotify'
+import { Route as AuthenticatedMaintenanceCommentsRouteImport } from './routes/_authenticated/maintenance/comments'
+import { Route as AuthenticatedMaintenanceCollaboratorsRouteImport } from './routes/_authenticated/maintenance/collaborators'
+import { Route as AuthenticatedArticlesTagsRouteImport } from './routes/_authenticated/articles/tags'
+import { Route as AuthenticatedArticlesMediaRouteImport } from './routes/_authenticated/articles/media'
+import { Route as AuthenticatedArticlesListRouteImport } from './routes/_authenticated/articles/list'
+import { Route as AuthenticatedArticlesCategoriesRouteImport } from './routes/_authenticated/articles/categories'
 
 const UnauthenticatedRouteRoute = UnauthenticatedRouteRouteImport.update({
   id: '/_unauthenticated',
@@ -120,6 +129,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedMaintenanceIndexRoute =
+  AuthenticatedMaintenanceIndexRouteImport.update({
+    id: '/maintenance/',
+    path: '/maintenance/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
@@ -136,6 +151,12 @@ const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
   path: '/chats/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedArticlesIndexRoute =
+  AuthenticatedArticlesIndexRouteImport.update({
+    id: '/articles/',
+    path: '/articles/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
   id: '/apps/',
   path: '/apps/',
@@ -165,6 +186,48 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedMaintenanceSpotifyRoute =
+  AuthenticatedMaintenanceSpotifyRouteImport.update({
+    id: '/maintenance/spotify',
+    path: '/maintenance/spotify',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMaintenanceCommentsRoute =
+  AuthenticatedMaintenanceCommentsRouteImport.update({
+    id: '/maintenance/comments',
+    path: '/maintenance/comments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMaintenanceCollaboratorsRoute =
+  AuthenticatedMaintenanceCollaboratorsRouteImport.update({
+    id: '/maintenance/collaborators',
+    path: '/maintenance/collaborators',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedArticlesTagsRoute =
+  AuthenticatedArticlesTagsRouteImport.update({
+    id: '/articles/tags',
+    path: '/articles/tags',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedArticlesMediaRoute =
+  AuthenticatedArticlesMediaRouteImport.update({
+    id: '/articles/media',
+    path: '/articles/media',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedArticlesListRoute =
+  AuthenticatedArticlesListRouteImport.update({
+    id: '/articles/list',
+    path: '/articles/list',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedArticlesCategoriesRoute =
+  AuthenticatedArticlesCategoriesRouteImport.update({
+    id: '/articles/categories',
+    path: '/articles/categories',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
@@ -179,14 +242,23 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof UnauthenticatedIndexRoute
+  '/articles/categories': typeof AuthenticatedArticlesCategoriesRoute
+  '/articles/list': typeof AuthenticatedArticlesListRoute
+  '/articles/media': typeof AuthenticatedArticlesMediaRoute
+  '/articles/tags': typeof AuthenticatedArticlesTagsRoute
+  '/maintenance/collaborators': typeof AuthenticatedMaintenanceCollaboratorsRoute
+  '/maintenance/comments': typeof AuthenticatedMaintenanceCommentsRoute
+  '/maintenance/spotify': typeof AuthenticatedMaintenanceSpotifyRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
+  '/articles': typeof AuthenticatedArticlesIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/dash': typeof AuthenticatedDashIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/maintenance': typeof AuthenticatedMaintenanceIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
@@ -203,14 +275,23 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof UnauthenticatedIndexRoute
+  '/articles/categories': typeof AuthenticatedArticlesCategoriesRoute
+  '/articles/list': typeof AuthenticatedArticlesListRoute
+  '/articles/media': typeof AuthenticatedArticlesMediaRoute
+  '/articles/tags': typeof AuthenticatedArticlesTagsRoute
+  '/maintenance/collaborators': typeof AuthenticatedMaintenanceCollaboratorsRoute
+  '/maintenance/comments': typeof AuthenticatedMaintenanceCommentsRoute
+  '/maintenance/spotify': typeof AuthenticatedMaintenanceSpotifyRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
+  '/articles': typeof AuthenticatedArticlesIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/dash': typeof AuthenticatedDashIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/maintenance': typeof AuthenticatedMaintenanceIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
@@ -231,14 +312,23 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_unauthenticated/': typeof UnauthenticatedIndexRoute
+  '/_authenticated/articles/categories': typeof AuthenticatedArticlesCategoriesRoute
+  '/_authenticated/articles/list': typeof AuthenticatedArticlesListRoute
+  '/_authenticated/articles/media': typeof AuthenticatedArticlesMediaRoute
+  '/_authenticated/articles/tags': typeof AuthenticatedArticlesTagsRoute
+  '/_authenticated/maintenance/collaborators': typeof AuthenticatedMaintenanceCollaboratorsRoute
+  '/_authenticated/maintenance/comments': typeof AuthenticatedMaintenanceCommentsRoute
+  '/_authenticated/maintenance/spotify': typeof AuthenticatedMaintenanceSpotifyRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
+  '/_authenticated/articles/': typeof AuthenticatedArticlesIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
   '/_authenticated/dash/': typeof AuthenticatedDashIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/maintenance/': typeof AuthenticatedMaintenanceIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
@@ -258,14 +348,23 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/articles/categories'
+    | '/articles/list'
+    | '/articles/media'
+    | '/articles/tags'
+    | '/maintenance/collaborators'
+    | '/maintenance/comments'
+    | '/maintenance/spotify'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
     | '/apps'
+    | '/articles'
     | '/chats'
     | '/dash'
     | '/help-center'
+    | '/maintenance'
     | '/settings/'
     | '/tasks'
     | '/users'
@@ -282,14 +381,23 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/articles/categories'
+    | '/articles/list'
+    | '/articles/media'
+    | '/articles/tags'
+    | '/maintenance/collaborators'
+    | '/maintenance/comments'
+    | '/maintenance/spotify'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
     | '/apps'
+    | '/articles'
     | '/chats'
     | '/dash'
     | '/help-center'
+    | '/maintenance'
     | '/settings'
     | '/tasks'
     | '/users'
@@ -309,14 +417,23 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_unauthenticated/'
+    | '/_authenticated/articles/categories'
+    | '/_authenticated/articles/list'
+    | '/_authenticated/articles/media'
+    | '/_authenticated/articles/tags'
+    | '/_authenticated/maintenance/collaborators'
+    | '/_authenticated/maintenance/comments'
+    | '/_authenticated/maintenance/spotify'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/apps/'
+    | '/_authenticated/articles/'
     | '/_authenticated/chats/'
     | '/_authenticated/dash/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/maintenance/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
@@ -458,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/maintenance/': {
+      id: '/_authenticated/maintenance/'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof AuthenticatedMaintenanceIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
@@ -477,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/chats'
       fullPath: '/chats'
       preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/articles/': {
+      id: '/_authenticated/articles/'
+      path: '/articles'
+      fullPath: '/articles'
+      preLoaderRoute: typeof AuthenticatedArticlesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/apps/': {
@@ -514,6 +645,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/maintenance/spotify': {
+      id: '/_authenticated/maintenance/spotify'
+      path: '/maintenance/spotify'
+      fullPath: '/maintenance/spotify'
+      preLoaderRoute: typeof AuthenticatedMaintenanceSpotifyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/maintenance/comments': {
+      id: '/_authenticated/maintenance/comments'
+      path: '/maintenance/comments'
+      fullPath: '/maintenance/comments'
+      preLoaderRoute: typeof AuthenticatedMaintenanceCommentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/maintenance/collaborators': {
+      id: '/_authenticated/maintenance/collaborators'
+      path: '/maintenance/collaborators'
+      fullPath: '/maintenance/collaborators'
+      preLoaderRoute: typeof AuthenticatedMaintenanceCollaboratorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/articles/tags': {
+      id: '/_authenticated/articles/tags'
+      path: '/articles/tags'
+      fullPath: '/articles/tags'
+      preLoaderRoute: typeof AuthenticatedArticlesTagsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/articles/media': {
+      id: '/_authenticated/articles/media'
+      path: '/articles/media'
+      fullPath: '/articles/media'
+      preLoaderRoute: typeof AuthenticatedArticlesMediaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/articles/list': {
+      id: '/_authenticated/articles/list'
+      path: '/articles/list'
+      fullPath: '/articles/list'
+      preLoaderRoute: typeof AuthenticatedArticlesListRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/articles/categories': {
+      id: '/_authenticated/articles/categories'
+      path: '/articles/categories'
+      fullPath: '/articles/categories'
+      preLoaderRoute: typeof AuthenticatedArticlesCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -542,20 +722,39 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedArticlesCategoriesRoute: typeof AuthenticatedArticlesCategoriesRoute
+  AuthenticatedArticlesListRoute: typeof AuthenticatedArticlesListRoute
+  AuthenticatedArticlesMediaRoute: typeof AuthenticatedArticlesMediaRoute
+  AuthenticatedArticlesTagsRoute: typeof AuthenticatedArticlesTagsRoute
+  AuthenticatedMaintenanceCollaboratorsRoute: typeof AuthenticatedMaintenanceCollaboratorsRoute
+  AuthenticatedMaintenanceCommentsRoute: typeof AuthenticatedMaintenanceCommentsRoute
+  AuthenticatedMaintenanceSpotifyRoute: typeof AuthenticatedMaintenanceSpotifyRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
+  AuthenticatedArticlesIndexRoute: typeof AuthenticatedArticlesIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedDashIndexRoute: typeof AuthenticatedDashIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
+  AuthenticatedMaintenanceIndexRoute: typeof AuthenticatedMaintenanceIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedArticlesCategoriesRoute: AuthenticatedArticlesCategoriesRoute,
+  AuthenticatedArticlesListRoute: AuthenticatedArticlesListRoute,
+  AuthenticatedArticlesMediaRoute: AuthenticatedArticlesMediaRoute,
+  AuthenticatedArticlesTagsRoute: AuthenticatedArticlesTagsRoute,
+  AuthenticatedMaintenanceCollaboratorsRoute:
+    AuthenticatedMaintenanceCollaboratorsRoute,
+  AuthenticatedMaintenanceCommentsRoute: AuthenticatedMaintenanceCommentsRoute,
+  AuthenticatedMaintenanceSpotifyRoute: AuthenticatedMaintenanceSpotifyRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
+  AuthenticatedArticlesIndexRoute: AuthenticatedArticlesIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedDashIndexRoute: AuthenticatedDashIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
+  AuthenticatedMaintenanceIndexRoute: AuthenticatedMaintenanceIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
 }

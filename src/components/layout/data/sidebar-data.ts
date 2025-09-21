@@ -18,6 +18,15 @@ import {
   IconUserCog,
   IconUserOff,
   IconUsers,
+  IconArticle,
+  IconCategory,
+  IconTag,
+  IconPhoto,
+  IconLibrary,
+  IconChartBar,
+  IconMessage,
+  IconUsersGroup,
+  IconMusic,
 } from '@tabler/icons-react'
 import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react'
 import { type SidebarData } from '../types'
@@ -55,20 +64,9 @@ export const sidebarData: SidebarData = {
           icon: IconLayoutDashboard,
         },
         {
-          title: 'Article Tasks',
+          title: 'Tasks',
           url: '/tasks',
           icon: IconChecklist,
-        },
-        {
-          title: 'Media Library',
-          url: '/apps',
-          icon: IconPackages,
-        },
-        {
-          title: 'Editor Comments',
-          url: '/chats',
-          badge: '3',
-          icon: IconMessages,
         },
         {
           title: 'Staff Members',
@@ -78,62 +76,62 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Management',
+      title: 'Articles',
       items: [
         {
-          title: 'Content',
-          icon: IconLockAccess,
+          title: 'Content Management',
+          icon: IconArticle,
           items: [
             {
-              title: 'Analytics',
-              url: '/sign-in',
+              title: 'Article Creation',
+              url: '/articles',
+              icon: IconArticle,
             },
             {
-              title: 'Media Gallery',
-              url: '/sign-in-2',
+              title: 'Categories',
+              url: '/articles/categories',
+              icon: IconCategory,
             },
             {
-              title: 'Contributors',
-              url: '/sign-up',
+              title: 'Tags',
+              url: '/articles/tags',
+              icon: IconTag,
             },
             {
-              title: 'Editorial Board',
-              url: '/forgot-password',
+              title: 'Media Library',
+              url: '/articles/media',
+              icon: IconPhoto,
             },
             {
-              title: 'Verification',
-              url: '/otp',
+              title: 'Article Library',
+              url: '/articles/list',
+              icon: IconLibrary,
             },
           ],
         },
         {
-          title: 'Errors',
-          icon: IconBug,
+          title: 'Maintenance',
+          icon: IconBarrierBlock,
           items: [
             {
-              title: 'Unauthorized',
-              url: '/401',
-              icon: IconLock,
+              title: 'Site Analytics',
+              url: '/maintenance',
+              icon: IconChartBar,
             },
             {
-              title: 'Forbidden',
-              url: '/403',
-              icon: IconUserOff,
+              title: 'Comments List',
+              url: '/maintenance/comments',
+              icon: IconMessage,
             },
             {
-              title: 'Not Found',
-              url: '/404',
-              icon: IconError404,
+              title: 'Collaborators',
+              url: '/maintenance/collaborators',
+              icon: IconUsersGroup,
             },
             {
-              title: 'Internal Server Error',
-              url: '/500',
-              icon: IconServerOff,
-            },
-            {
-              title: 'Maintenance Error',
-              url: '/503',
-              icon: IconBarrierBlock,
+              title: 'Spotify',
+              url: '/maintenance/spotify',
+              icon: IconMusic,
             },
           ],
         },
