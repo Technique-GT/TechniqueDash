@@ -1,4 +1,5 @@
 import { useState } from "react";
+import tagData from "@/data/tags.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, X } from "lucide-react";
 
 export default function Tags() {
-  const [tags, setTags] = useState(["react", "javascript", "web-development", "design", "ux"]);
+  const [tags, setTags] = useState<string[]>(() => tagData as string[]);
   const [newTag, setNewTag] = useState("");
 
   const handleAddTag = () => {

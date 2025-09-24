@@ -1,4 +1,5 @@
 import { useState } from "react";
+import categoriesData from "@/data/categories.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,12 +7,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2 } from "lucide-react";
 
+type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+};
+
 export default function Categories() {
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Technology", slug: "technology", count: 15 },
-    { id: 2, name: "Lifestyle", slug: "lifestyle", count: 8 },
-    { id: 3, name: "Business", slug: "business", count: 12 },
-  ]);
+  const [categories, setCategories] = useState<Category[]>(
+    () => categoriesData as Category[],
+  );
   const [newCategory, setNewCategory] = useState("");
 
   const handleAddCategory = () => {
