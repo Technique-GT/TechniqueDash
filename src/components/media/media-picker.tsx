@@ -27,6 +27,7 @@ type MediaPickerProps = {
   onChange: (mediaId: string | null) => void
   placeholder?: string
   className?: string
+  error?: boolean
 }
 
 export function MediaPicker({
@@ -35,6 +36,7 @@ export function MediaPicker({
   onChange,
   placeholder = "Select media",
   className,
+  error = false,
 }: MediaPickerProps) {
   const [open, setOpen] = useState(false)
 
@@ -63,7 +65,11 @@ export function MediaPicker({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            aria-invalid={error}
+            className={cn(
+              "w-full justify-between",
+              error && "border-destructive focus-visible:ring-destructive"
+            )}
           >
             <div className="flex min-w-0 items-center gap-3">
               {selectedItem ? (

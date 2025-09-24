@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,12 +20,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 import { MediaPicker, type MediaItem } from "@/components/media/media-picker";
 import categoriesData from "@/data/categories.json";
 import tagData from "@/data/tags.json";
 import authorData from "@/data/authors.json";
 import mediaLibraryData from "@/data/media-library.json";
+
+type FieldErrorKey =
+  | "title"
+  | "content"
+  | "featuredMedia"
+  | "excerpt"
+  | "authors"
+  | "category"
+  | "tags";
 
 export default function ArticleCreation() {
   const [title, setTitle] = useState("");
@@ -38,7 +47,7 @@ export default function ArticleCreation() {
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
   const [featuredMediaId, setFeaturedMediaId] = useState<string | null>(null);
   const [isPublished, setIsPublished] = useState(false);
-  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState<{
     title: string;
@@ -68,46 +77,66 @@ export default function ArticleCreation() {
     () => contentText.trim().length === 0,
     [contentText],
   );
+  const errorEntries = useMemo(
+    () =>
+      Object.entries(formErrors).filter(([, value]) => Boolean(value)) as Array<[
+        FieldErrorKey,
+        string
+      ]>,
+    [formErrors],
+  );
+
+  const clearFieldError = (field: FieldErrorKey) => {
+    setFormErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const errors: string[] = [];
+    const errors: Partial<Record<FieldErrorKey, string>> = {};
 
     if (!title.trim()) {
-      errors.push("Title is required.");
+      errors.title = "Title is required.";
     }
 
     if (isContentEmpty) {
-      errors.push("Content is required.");
+      errors.content = "Content is required.";
     }
 
     if (!featuredMediaId) {
-      errors.push("Featured media is required.");
+      errors.featuredMedia = "Featured media is required.";
     }
 
     if (!excerpt.trim()) {
-      errors.push("Caption is required.");
+      errors.excerpt = "Caption is required.";
     }
 
     if (selectedAuthors.length === 0) {
-      errors.push("At least one author must be selected.");
+      errors.authors = "At least one author must be selected.";
     }
 
     if (!category) {
-      errors.push("Category is required.");
+      errors.category = "Category is required.";
     }
 
     if (selectedTags.length === 0) {
-      errors.push("At least one tag must be selected.");
+      errors.tags = "At least one tag must be selected.";
     }
 
-    if (errors.length > 0) {
+    if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
 
-    setFormErrors([]);
+    setFormErrors({});
 
     setPendingSubmission({
       title,
@@ -140,6 +169,7 @@ export default function ArticleCreation() {
     setFeaturedMediaId(null);
     setIsPublished(false);
     setEditorResetKey((prev) => prev + 1);
+    setFormErrors({});
     setPendingSubmission(null);
     setConfirmOpen(false);
   };
@@ -157,10 +187,23 @@ export default function ArticleCreation() {
               <Input
                 id="title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTitle(value);
+                  if (formErrors.title && value.trim()) {
+                    clearFieldError("title");
+                  }
+                }}
                 placeholder="Enter article title"
-                className='text-8xl font-semibold'
+                className={cn(
+                  "text-8xl font-semibold",
+                  formErrors.title && "border-destructive focus-visible:ring-destructive"
+                )}
+                aria-invalid={Boolean(formErrors.title)}
               />
+              {formErrors.title && (
+                <p className="text-xs text-destructive">{formErrors.title}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -171,12 +214,19 @@ export default function ArticleCreation() {
                   onSerializedChange={setContent}
                   onChange={(editorState) => {
                     editorState.read(() => {
-                      setContentText($getRoot().getTextContent().trim());
+                      const text = $getRoot().getTextContent().trim();
+                      setContentText(text);
+                      if (formErrors.content && text.length > 0) {
+                        clearFieldError("content");
+                      }
                     });
                   }}
                 />
               </div>
               <input type="hidden" name="content" value={serializedContent} required />
+              {formErrors.content && (
+                <p className="text-xs text-destructive">{formErrors.content}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -186,8 +236,14 @@ export default function ArticleCreation() {
                 <MediaPicker
                   value={featuredMediaId ?? undefined}
                   items={mediaLibrary}
-                  onChange={setFeaturedMediaId}
+                  onChange={(id) => {
+                    setFeaturedMediaId(id);
+                    if (formErrors.featuredMedia && id) {
+                      clearFieldError("featuredMedia");
+                    }
+                  }}
                   placeholder="Choose featured media"
+                  error={Boolean(formErrors.featuredMedia)}
                 />
                 <input
                   type="hidden"
@@ -201,6 +257,9 @@ export default function ArticleCreation() {
                   value={selectedMedia?.url ?? ""}
                   required
                 />
+                {formErrors.featuredMedia && (
+                  <p className="text-xs text-destructive">{formErrors.featuredMedia}</p>
+                )}
               </div>
               
               {/* Caption */}
@@ -209,10 +268,23 @@ export default function ArticleCreation() {
                 <Input
                   id="excerpt"
                   value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setExcerpt(value);
+                    if (formErrors.excerpt && value.trim()) {
+                      clearFieldError("excerpt");
+                    }
+                  }}
                   placeholder="Enter caption"
-                  className='italic'
+                  className={cn(
+                    "italic",
+                    formErrors.excerpt && "border-destructive focus-visible:ring-destructive"
+                  )}
+                  aria-invalid={Boolean(formErrors.excerpt)}
                 />
+                {formErrors.excerpt && (
+                  <p className="text-xs text-destructive">{formErrors.excerpt}</p>
+                )}
               </div>
             </div>
 
@@ -224,9 +296,17 @@ export default function ArticleCreation() {
                   <TagInput
                     id="authors"
                     value={selectedAuthors}
-                    onChange={setSelectedAuthors}
+                    onChange={(values) => {
+                      setSelectedAuthors(values);
+                      if (formErrors.authors && values.length > 0) {
+                        clearFieldError("authors");
+                      }
+                    }}
                     placeholder="Add authors"
                     normalizeTag={(tag) => tag}
+                    className={cn(
+                      formErrors.authors && "border-destructive focus-within:ring-destructive"
+                    )}
                   />
                   <input
                     type="hidden"
@@ -234,6 +314,9 @@ export default function ArticleCreation() {
                     value={selectedAuthors.join(",")}
                     required
                   />
+                  {formErrors.authors && (
+                    <p className="text-xs text-destructive">{formErrors.authors}</p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {availableAuthors.map((author) => (
                       <Badge
@@ -258,8 +341,21 @@ export default function ArticleCreation() {
                 {/* Category */}
                 <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
+                <Select
+                  value={category}
+                  onValueChange={(value) => {
+                    setCategory(value);
+                    if (formErrors.category && value) {
+                      clearFieldError("category");
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      formErrors.category && "border-destructive focus:ring-destructive"
+                    )}
+                    aria-invalid={Boolean(formErrors.category)}
+                  >
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -271,6 +367,9 @@ export default function ArticleCreation() {
                   </SelectContent>
                 </Select>
                 <input type="hidden" name="category" value={category} required />
+                {formErrors.category && (
+                  <p className="text-xs text-destructive">{formErrors.category}</p>
+                )}
                 </div>
 
 
@@ -296,11 +395,22 @@ export default function ArticleCreation() {
                 <TagInput
                   id="tags"
                   value={selectedTags}
-                  onChange={setSelectedTags}
+                  onChange={(values) => {
+                    setSelectedTags(values);
+                    if (formErrors.tags && values.length > 0) {
+                      clearFieldError("tags");
+                    }
+                  }}
                   placeholder="Select tags"
+                  className={cn(
+                    formErrors.tags && "border-destructive focus-within:ring-destructive"
+                  )}
                 />
                 {/* for form submission, selected tags sent as a single string */}
                 <input type="hidden" name="tags" value={selectedTags.join(",")} required />
+                {formErrors.tags && (
+                  <p className="text-xs text-destructive">{formErrors.tags}</p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {availableTags.map((tag) => (
                     <Badge
@@ -322,19 +432,6 @@ export default function ArticleCreation() {
                 </div>
               </div>
             </div>
-
-            {formErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertTitle>Missing information</AlertTitle>
-                <AlertDescription>
-                  <ul className="list-disc space-y-1 pl-4">
-                    {formErrors.map((error) => (
-                      <li key={error}>{error}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
           </form>
         </CardContent>
       </Card>
