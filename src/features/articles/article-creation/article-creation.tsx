@@ -77,14 +77,6 @@ export default function ArticleCreation() {
     () => contentText.trim().length === 0,
     [contentText],
   );
-  const errorEntries = useMemo(
-    () =>
-      Object.entries(formErrors).filter(([, value]) => Boolean(value)) as Array<[
-        FieldErrorKey,
-        string
-      ]>,
-    [formErrors],
-  );
 
   const clearFieldError = (field: FieldErrorKey) => {
     setFormErrors((prev) => {
@@ -151,7 +143,7 @@ export default function ArticleCreation() {
     setConfirmOpen(true);
   };
 
-  const handleConfirmSubmit = () => {
+  const handleSubmitOnConfirm = () => {
     if (!pendingSubmission) {
       return;
     }
@@ -318,20 +310,22 @@ export default function ArticleCreation() {
                     <p className="text-xs text-destructive">{formErrors.authors}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {availableAuthors.map((author) => (
-                      <Badge
-                        key={author}
-                        variant="outline"
-                        className="cursor-pointer px-3 py-1 text-sm"
-                        onClick={() =>
-                          setSelectedAuthors((prev) =>
-                            prev.includes(author) ? prev : [...prev, author],
-                          )
-                        }
-                      >
-                        {author}
-                      </Badge>
-                    ))}
+                    {availableAuthors
+                      .filter((author) => !selectedAuthors.includes(author))
+                      .map((author) => (
+                        <Badge
+                          key={author}
+                          variant="outline"
+                          className="cursor-pointer px-3 py-1 text-sm"
+                          onClick={() =>
+                            setSelectedAuthors((prev) =>
+                              prev.includes(author) ? prev : [...prev, author],
+                            )
+                          }
+                        >
+                          {author}
+                        </Badge>
+                      ))}
                     {availableAuthors.length === 0 && (
                       <p className="text-muted-foreground">No authors available</p>
                     )}
@@ -412,20 +406,22 @@ export default function ArticleCreation() {
                   <p className="text-xs text-destructive">{formErrors.tags}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="cursor-pointer px-3 py-1 text-sm"
-                      onClick={() =>
-                        setSelectedTags((prev) =>
-                          prev.includes(tag) ? prev : [...prev, tag],
-                        )
-                      }
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
+                  {availableTags
+                    .filter((tag) => !selectedTags.includes(tag))
+                    .map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="cursor-pointer px-3 py-1 text-sm"
+                        onClick={() =>
+                          setSelectedTags((prev) =>
+                            prev.includes(tag) ? prev : [...prev, tag],
+                          )
+                        }
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
                   {availableTags.length === 0 && (
                     <p className="text-muted-foreground">No tags available</p>
                   )}
@@ -456,7 +452,7 @@ export default function ArticleCreation() {
             <AlertDialogCancel onClick={() => setPendingSubmission(null)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubmit}>
+            <AlertDialogAction onClick={handleSubmitOnConfirm}>
               Confirm submission
             </AlertDialogAction>
           </AlertDialogFooter>
