@@ -14,6 +14,7 @@ type TagInputProps = {
   className?: string
   inputClassName?: string
   disabled?: boolean
+  normalizeTag?: (tag: string) => string
 }
 
 export function TagInput({
@@ -24,9 +25,9 @@ export function TagInput({
   className,
   inputClassName,
   disabled,
+  normalizeTag = (tag: string) => tag.toLowerCase(),
 }: TagInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
   const [inputValue, setInputValue] = useState("")
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function TagInput({
     }
 
     updateWidth()
-  }, [inputValue, placeholder])
+  }, [inputValue, placeholder, value])
 
   const addTag = (tag: string) => {
     const cleaned = tag.trim()
@@ -61,7 +62,7 @@ export function TagInput({
       return
     }
 
-    const normalized = cleaned.toLowerCase()
+    const normalized = normalizeTag(cleaned)
 
     if (!value.includes(normalized)) {
       onChange([...value, normalized])
@@ -85,7 +86,7 @@ export function TagInput({
     }
 
     if (event.key === "Backspace" && inputValue === "") {
-      const lastTag = value.at(-1)
+      const lastTag = value.length > 0 ? value[value.length - 1] : undefined
       if (lastTag) {
         removeTag(lastTag)
       }
@@ -94,7 +95,6 @@ export function TagInput({
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "flex min-h-10 flex-wrap items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         disabled && "cursor-not-allowed opacity-50",

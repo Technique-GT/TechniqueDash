@@ -4,6 +4,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin"
 import { ListPlugin } from "@lexical/react/LexicalListPlugin"
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin"
 
+import { CharacterCountPlugin } from "@/components/editor/plugins/character-count"
 import { ContentEditable } from "@/components/editor/editor-ui/content-editable"
 
 import { ToolbarPlugin } from "./toolbar"
@@ -23,6 +24,7 @@ export function Plugins() {
       <HistoryPlugin />
       <ListPlugin />
       <LinkPlugin />
+      <CharacterCountPlugin limit={5000} />
     </div>
   )
 }

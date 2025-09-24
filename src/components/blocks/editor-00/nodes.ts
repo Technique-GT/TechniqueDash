@@ -1,4 +1,5 @@
 import { ListItemNode, ListNode } from "@lexical/list"
+import { OverflowNode } from "@lexical/overflow"
 import { LinkNode } from "@lexical/link"
 import { HeadingNode, QuoteNode } from "@lexical/rich-text"
 import {
@@ -17,4 +18,5 @@ export const nodes: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement> =
   ListNode,
   ListItemNode,
   LinkNode,
+  OverflowNode,
 ]
