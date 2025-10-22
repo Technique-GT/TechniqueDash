@@ -20,10 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils";
 
 import { MediaPicker, type MediaItem } from "@/components/media/media-picker";
 import categoriesData from "@/data/categories.json";
+import subcategoriesData from "@/data/subcategories.json";
 import tagData from "@/data/tags.json";
 import authorData from "@/data/authors.json";
 import mediaLibraryData from "@/data/media-library.json";
@@ -35,6 +41,7 @@ type FieldErrorKey =
   | "excerpt"
   | "authors"
   | "category"
+  | "subcategory"
   | "tags";
 
 export default function ArticleCreation() {
@@ -43,6 +50,7 @@ export default function ArticleCreation() {
   const [contentText, setContentText] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
   const [featuredMediaId, setFeaturedMediaId] = useState<string | null>(null);
@@ -53,6 +61,7 @@ export default function ArticleCreation() {
     title: string;
     content: string;
     category: string;
+    subcategory: string;
     tags: string[];
     authors: string[];
     featuredMedia: MediaItem | null;
@@ -63,6 +72,30 @@ export default function ArticleCreation() {
   const availableTags = useMemo(() => tagData as string[], []);
   const availableAuthors = useMemo(() => authorData as string[], []);
   const mediaLibrary = useMemo(() => mediaLibraryData as MediaItem[], []);
+  const subcategoriesBySlug = useMemo(() => {
+    const entries = Object.entries(subcategoriesData as Record<string, string[]>);
+    return entries.reduce<Record<string, string[]>>((acc, [categoryName, subcategories]) => {
+      const matchedCategory = categoriesData.find((cat) => cat.name === categoryName);
+      if (matchedCategory) {
+        acc[matchedCategory.slug] = subcategories;
+      }
+      return acc;
+    }, {});
+  }, []);
+  const availableSubcategories = useMemo(
+    () => subcategoriesBySlug[category] ?? [],
+    [category, subcategoriesBySlug],
+  );
+  const isSubcategoryRequired = availableSubcategories.length > 0;
+  const subcategoryPlaceholder = useMemo(() => {
+    if (!category) {
+      return "Select a category first";
+    }
+    if (!isSubcategoryRequired) {
+      return "No sub-categories available";
+    }
+    return "Select sub-category";
+  }, [category, isSubcategoryRequired]);
   const selectedMedia = useMemo(
     () => mediaLibrary.find((item) => item.id === featuredMediaId) ?? null,
     [mediaLibrary, featuredMediaId],
@@ -119,6 +152,10 @@ export default function ArticleCreation() {
       errors.category = "Category is required.";
     }
 
+    if (isSubcategoryRequired && !subcategory) {
+      errors.subcategory = "Sub-category is required.";
+    }
+
     if (selectedTags.length === 0) {
       errors.tags = "At least one tag must be selected.";
     }
@@ -134,6 +171,7 @@ export default function ArticleCreation() {
       title,
       content: serializedContent,
       category,
+      subcategory,
       tags: selectedTags,
       authors: selectedAuthors,
       featuredMedia: selectedMedia,
@@ -156,6 +194,7 @@ export default function ArticleCreation() {
     setContentText("");
     setExcerpt("");
     setCategory("");
+    setSubcategory("");
     setSelectedTags([]);
     setSelectedAuthors([]);
     setFeaturedMediaId(null);
@@ -175,7 +214,7 @@ export default function ArticleCreation() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title" className='gap-0'><span className='text-destructive'>*</span>Title</Label>
               <Input
                 id="title"
                 value={title}
@@ -199,7 +238,7 @@ export default function ArticleCreation() {
             </div>
 
             <div className="space-y-2">
-              <Label id="content-label">Content</Label>
+              <Label id="content-label" className='gap-0'><span className='text-destructive'>*</span>Content</Label>
               <div role="group" aria-labelledby="content-label">
                 <Editor
                   key={editorResetKey}
@@ -224,7 +263,7 @@ export default function ArticleCreation() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Featured Media */}
               <div className="space-y-2">
-                <Label htmlFor="featured-media">Featured Media</Label>
+                <Label htmlFor="featured-media" className='gap-0'><span className='text-destructive'>*</span>Featured Media</Label>
                 <MediaPicker
                   value={featuredMediaId ?? undefined}
                   items={mediaLibrary}
@@ -256,7 +295,7 @@ export default function ArticleCreation() {
               
               {/* Caption */}
               <div className="space-y-2">
-                <Label htmlFor="excerpt">Caption</Label>
+                <Label htmlFor="excerpt" className='gap-0'><span className='text-destructive'>*</span>Caption</Label>
                 <Input
                   id="excerpt"
                   value={excerpt}
@@ -284,7 +323,7 @@ export default function ArticleCreation() {
               <div className="space-y-6">
                 {/* Authors */}
                 <div className="space-y-2">
-                  <Label htmlFor="authors">Authors</Label>
+                  <Label htmlFor="authors" className='gap-0'><span className='text-destructive'>*</span>Authors</Label>
                   <TagInput
                     id="authors"
                     value={selectedAuthors}
@@ -332,38 +371,101 @@ export default function ArticleCreation() {
                   </div>
                 </div>
                 
-                {/* Category */}
-                <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={category}
-                  onValueChange={(value) => {
-                    setCategory(value);
-                    if (formErrors.category && value) {
-                      clearFieldError("category");
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      formErrors.category && "border-destructive focus:ring-destructive"
+                {/* Category & sub-category */}
+                <div className="space-y-2 flex flex-row gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className='gap-0'><span className='text-destructive'>*</span>Category</Label>
+                    <Select
+                      value={category}
+                      onValueChange={(value) => {
+                        setCategory(value);
+                        const nextSubcategories = subcategoriesBySlug[value] ?? [];
+                        setSubcategory((prev) =>
+                          nextSubcategories.includes(prev) ? prev : "",
+                        );
+                        if (formErrors.category && value) {
+                          clearFieldError("category");
+                        }
+                        if (formErrors.subcategory && nextSubcategories.length === 0) {
+                          clearFieldError("subcategory");
+                        }
+                      }}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          formErrors.category && "border-destructive focus:ring-destructive"
+                        )}
+                        aria-invalid={Boolean(formErrors.category)}
+                      >
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriesData.map((category) => (
+                          <SelectItem key={category.id} value={category.slug}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <input type="hidden" name="category" value={category} required />
+                    {formErrors.category && (
+                      <p className="text-xs text-destructive">{formErrors.category}</p>
                     )}
-                    aria-invalid={Boolean(formErrors.category)}
-                  >
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoriesData.map((category) => (
-                      <SelectItem key={category.id} value={category.slug}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" name="category" value={category} required />
-                {formErrors.category && (
-                  <p className="text-xs text-destructive">{formErrors.category}</p>
-                )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="subcategory">
+                      Sub-category
+                      <Tooltip >
+                        <TooltipTrigger>
+                          <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/50 text-[10px] text-muted-foreground cursor-help">
+                            ?
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className='max-w-64 flex-wrap'>
+                          Values are determined by sub-categories defined per category on the frontend site. Selecting a sub-category will help classify articles within that specific sub-category on the frontend.
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Select
+                      value={subcategory}
+                      onValueChange={(value) => {
+                        setSubcategory(value);
+                        if (formErrors.subcategory && value) {
+                          clearFieldError("subcategory");
+                        }
+                      }}
+                      disabled={!isSubcategoryRequired}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          formErrors.subcategory &&
+                            "border-destructive focus:ring-destructive",
+                          !isSubcategoryRequired && "text-muted-foreground"
+                        )}
+                        aria-invalid={Boolean(formErrors.subcategory)}
+                        disabled={!isSubcategoryRequired}
+                      >
+                        <SelectValue placeholder={subcategoryPlaceholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSubcategories.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <input
+                      type="hidden"
+                      name="subcategory"
+                      value={subcategory}
+                      required={isSubcategoryRequired}
+                    />
+                    {formErrors.subcategory && (
+                      <p className="text-xs text-destructive">{formErrors.subcategory}</p>
+                    )}
+                  </div>
                 </div>
 
 
@@ -385,7 +487,7 @@ export default function ArticleCreation() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tags">Tags</Label>
+                <Label htmlFor="tags" className='gap-0'><span className='text-destructive'>*</span>Tags</Label>
                 <TagInput
                   id="tags"
                   value={selectedTags}
