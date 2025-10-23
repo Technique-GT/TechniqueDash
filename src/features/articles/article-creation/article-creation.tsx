@@ -123,7 +123,7 @@ export default function ArticleCreation() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const checkValidity = (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: Partial<Record<FieldErrorKey, string>> = {};
@@ -186,8 +186,8 @@ export default function ArticleCreation() {
       return;
     }
 
-    console.log(pendingSubmission);
-    // Handle article creation logic here
+    // console.log(pendingSubmission);
+    // TODO: Handle article creation logic
 
     setTitle("");
     setContent(undefined);
@@ -212,7 +212,7 @@ export default function ArticleCreation() {
           <CardTitle>Create New Article</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={checkValidity} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title" className='gap-0'><span className='text-destructive'>*</span>Title</Label>
               <Input
