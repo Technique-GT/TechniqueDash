@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Edit, Trash2, Mail, UserPlus } from "lucide-react";
 
 interface Collaborator {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   role: string;
@@ -19,43 +19,130 @@ interface Collaborator {
 }
 
 export default function Collaborators() {
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([
-    { id: 1, name: "Sarah Johnson", email: "sarah@example.com", role: "Editor", status: "active", joinDate: "2024-01-15" },
-    { id: 2, name: "Mike Chen", email: "mike@example.com", role: "Writer", status: "active", joinDate: "2024-02-10" },
-    { id: 3, name: "Emma Wilson", email: "emma@example.com", role: "Reviewer", status: "pending", joinDate: "2024-03-05" },
-    { id: 4, name: "Alex Rivera", email: "alex@example.com", role: "Writer", status: "inactive", joinDate: "2024-01-20" },
-  ]);
-
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
   const [newCollaborator, setNewCollaborator] = useState({
     name: "",
     email: "",
     role: "Writer",
   });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const filteredCollaborators = collaborators.filter(
-    (collab) =>
-      collab.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      collab.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch collaborators on component mount
+  useEffect(() => {
+    fetchCollaborators();
+  }, []);
 
-  const handleAddCollaborator = () => {
-    if (newCollaborator.name && newCollaborator.email) {
-      const newCollab: Collaborator = {
-        id: Date.now(),
-        name: newCollaborator.name,
-        email: newCollaborator.email,
-        role: newCollaborator.role,
-        status: "pending",
-        joinDate: new Date().toISOString().split('T')[0],
-      };
-      setCollaborators([...collaborators, newCollab]);
-      setNewCollaborator({ name: "", email: "", role: "Writer" });
+  const fetchCollaborators = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const response = await fetch(`http://localhost:5050/api/collaborators?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setCollaborators(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching collaborators:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteCollaborator = (id: number) => {
-    setCollaborators(collaborators.filter(collab => collab.id !== id));
+  const handleAddCollaborator = async () => {
+    if (newCollaborator.name && newCollaborator.email) {
+      try {
+        const response = await fetch('http://localhost:5050/api/collaborators', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newCollaborator),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          await fetchCollaborators();
+          setNewCollaborator({ name: "", email: "", role: "Writer" });
+          setIsDialogOpen(false);
+        } else {
+          alert(data.message || 'Error adding collaborator');
+        }
+      } catch (error) {
+        console.error('Error adding collaborator:', error);
+        alert('Error adding collaborator');
+      }
+    }
+  };
+
+  const handleDeleteCollaborator = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this collaborator?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/collaborators/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchCollaborators();
+      } else {
+        alert(data.message || 'Error deleting collaborator');
+      }
+    } catch (error) {
+      console.error('Error deleting collaborator:', error);
+      alert('Error deleting collaborator');
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/collaborators/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchCollaborators();
+      } else {
+        alert(data.message || 'Error updating status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating status');
+    }
+  };
+
+  const handleResendInvitation = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/collaborators/${id}/resend-invitation`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Invitation resent successfully');
+        await fetchCollaborators();
+      } else {
+        alert(data.message || 'Error resending invitation');
+      }
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      alert('Error resending invitation');
+    }
   };
 
   const getStatusVariant = (status: string) => {
@@ -67,11 +154,31 @@ export default function Collaborators() {
     }
   };
 
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCollaborators();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <UserPlus className="w-12 h-12 animate-pulse mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading collaborators...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Collaborators</h1>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="w-4 h-4 mr-2" />
@@ -148,7 +255,7 @@ export default function Collaborators() {
                 className="pl-10"
               />
             </div>
-            <Select defaultValue="all">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -173,20 +280,34 @@ export default function Collaborators() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCollaborators.map((collaborator) => (
-                <TableRow key={collaborator.id}>
+              {collaborators.map((collaborator) => (
+                <TableRow key={collaborator._id}>
                   <TableCell className="font-medium">{collaborator.name}</TableCell>
                   <TableCell>{collaborator.email}</TableCell>
                   <TableCell>{collaborator.role}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(collaborator.status)}>
-                      {collaborator.status}
-                    </Badge>
+                    <Select
+                      value={collaborator.status}
+                      onValueChange={(value) => handleUpdateStatus(collaborator._id, value)}
+                    >
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
-                  <TableCell>{collaborator.joinDate}</TableCell>
+                  <TableCell>{new Date(collaborator.joinDate).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleResendInvitation(collaborator._id)}
+                      >
                         <Mail className="w-4 h-4" />
                       </Button>
                       <Button variant="outline" size="sm">
@@ -195,7 +316,7 @@ export default function Collaborators() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteCollaborator(collaborator.id)}
+                        onClick={() => handleDeleteCollaborator(collaborator._id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
