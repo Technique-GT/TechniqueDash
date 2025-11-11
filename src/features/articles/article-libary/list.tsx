@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,74 +52,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 interface Article {
-  id: number;
+  _id: string;
   title: string;
-  author: string;
+  authors: string[];
   category: string;
-  status: "published" | "draft" | "archived";
-  publishDate: string;
+  subcategory?: string;
+  status: "published" | "draft";
+  publishedAt?: string;
   views: number;
-  likes: number;
+  excerpt: string;
+  tags: string[];
+  featuredMedia: {
+    id: string;
+    url: string;
+    alt?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function ArticleList() {
-  // Sample data - in a real app, this would come from your database
-  const [articles, setArticles] = useState<Article[]>([
-    {
-      id: 1,
-      title: "Getting Started with React",
-      author: "Jane Smith",
-      category: "Technology",
-      status: "published",
-      publishDate: "2024-01-15",
-      views: 1245,
-      likes: 89,
-    },
-    {
-      id: 2,
-      title: "The Future of Web Development",
-      author: "John Doe",
-      category: "Technology",
-      status: "published",
-      publishDate: "2024-01-20",
-      views: 2890,
-      likes: 152,
-    },
-    {
-      id: 3,
-      title: "Healthy Eating Habits",
-      author: "Sarah Johnson",
-      category: "Lifestyle",
-      status: "draft",
-      publishDate: "2024-02-05",
-      views: 0,
-      likes: 0,
-    },
-    {
-      id: 4,
-      title: "Climate Change Solutions",
-      author: "Michael Brown",
-      category: "Environment",
-      status: "published",
-      publishDate: "2024-01-28",
-      views: 3567,
-      likes: 210,
-    },
-    {
-      id: 5,
-      title: "Financial Planning for Beginners",
-      author: "Emily Davis",
-      category: "Finance",
-      status: "archived",
-      publishDate: "2023-12-10",
-      views: 1890,
-      likes: 95,
-    },
-  ]);
-
+  const navigate = useNavigate();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -128,6 +87,31 @@ export default function ArticleList() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [editedArticle, setEditedArticle] = useState<Partial<Article> | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Fetch articles from backend
+  const fetchArticles = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5050/api/articles');
+      const result = await response.json();
+      
+      if (result.success) {
+        setArticles(result.data);
+      } else {
+        setMessage({ type: 'error', text: 'Failed to fetch articles' });
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error);
+      setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
 
   // Get unique categories for filter
   const categories = Array.from(new Set(articles.map(article => article.category)));
@@ -135,8 +119,10 @@ export default function ArticleList() {
   // Filter articles based on search and filters
   const filteredArticles = articles.filter(article => {
     const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.author.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || article.status === statusFilter;
+                         article.authors.some(author => author.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = statusFilter === "all" || 
+                         (statusFilter === "published" && article.status === "published") ||
+                         (statusFilter === "draft" && article.status === "draft");
     const matchesCategory = categoryFilter === "all" || article.category === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesCategory;
@@ -150,14 +136,32 @@ export default function ArticleList() {
   };
 
   // Handle saving edited article
-  const handleSaveEdit = () => {
-    if (currentArticle && editedArticle) {
-      setArticles(articles.map(article => 
-        article.id === currentArticle.id ? { ...article, ...editedArticle } as Article : article
-      ));
-      setEditDialogOpen(false);
-      setCurrentArticle(null);
-      setEditedArticle(null);
+  const handleSaveEdit = async () => {
+    if (!currentArticle || !editedArticle) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedArticle),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Article updated successfully!' });
+        fetchArticles(); // Refresh the list
+        setEditDialogOpen(false);
+        setCurrentArticle(null);
+        setEditedArticle(null);
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to update article' });
+      }
+    } catch (error) {
+      console.error('Error updating article:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
     }
   };
 
@@ -168,11 +172,27 @@ export default function ArticleList() {
   };
 
   // Confirm delete
-  const confirmDelete = () => {
-    if (currentArticle) {
-      setArticles(articles.filter(article => article.id !== currentArticle.id));
-      setDeleteDialogOpen(false);
-      setCurrentArticle(null);
+  const confirmDelete = async () => {
+    if (!currentArticle) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Article deleted successfully!' });
+        fetchArticles(); // Refresh the list
+        setDeleteDialogOpen(false);
+        setCurrentArticle(null);
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to delete article' });
+      }
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
     }
   };
 
@@ -182,24 +202,64 @@ export default function ArticleList() {
     setViewDialogOpen(true);
   };
 
+  // Handle creating new article - using TanStack Router navigation
+  const handleNewArticle = () => {
+    navigate({ to: '/articles' });
+  };
+
   // Get status badge variant
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "published": return "default";
       case "draft": return "secondary";
-      case "archived": return "outline";
       default: return "outline";
     }
   };
 
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Clear message after 5 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Message Display */}
+      {message && (
+        <div className={`p-4 rounded-md ${
+          message.type === 'success' 
+            ? 'bg-green-50 border border-green-200 text-green-800' 
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Article Management</h1>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Article
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchArticles} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleNewArticle}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Article
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -214,7 +274,7 @@ export default function ArticleList() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search articles..."
+                placeholder="Search articles by title or author..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -228,7 +288,6 @@ export default function ArticleList() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -244,79 +303,111 @@ export default function ArticleList() {
             </Select>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Author</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Publish Date</TableHead>
-                  <TableHead>Views</TableHead>
-                  <TableHead>Likes</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredArticles.map((article) => (
-                  <TableRow key={article.id}>
-                    <TableCell className="font-medium">{article.title}</TableCell>
-                    <TableCell>{article.author}</TableCell>
-                    <TableCell>{article.category}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(article.status)}>
-                        {article.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{article.publishDate}</TableCell>
-                    <TableCell>{article.views}</TableCell>
-                    <TableCell>{article.likes}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleView(article)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(article)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(article)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredArticles.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>No articles found matching your criteria</p>
+          {loading ? (
+            <div className="text-center py-12">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p>Loading articles...</p>
             </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Authors</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredArticles.map((article) => (
+                      <TableRow key={article._id}>
+                        <TableCell className="font-medium max-w-xs truncate">
+                          {article.title}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {article.authors.slice(0, 2).map((author, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {author}
+                              </Badge>
+                            ))}
+                            {article.authors.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{article.authors.length - 2} more
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{article.category}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(article.status)}>
+                            {article.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(article.createdAt)}</TableCell>
+                        <TableCell>{article.views}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleView(article)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(article)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDelete(article)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredArticles.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No articles found matching your criteria</p>
+                  {articles.length === 0 && (
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={handleNewArticle}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create your first article
+                    </Button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Article</DialogTitle>
             <DialogDescription>
@@ -334,34 +425,30 @@ export default function ArticleList() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="author">Author</Label>
+                <Label htmlFor="authors">Authors (comma separated)</Label>
                 <Input
-                  id="author"
-                  value={editedArticle.author || ""}
-                  onChange={(e) => setEditedArticle({ ...editedArticle, author: e.target.value })}
+                  id="authors"
+                  value={editedArticle.authors?.join(", ") || ""}
+                  onChange={(e) => setEditedArticle({ 
+                    ...editedArticle, 
+                    authors: e.target.value.split(',').map(author => author.trim()).filter(Boolean)
+                  })}
+                  placeholder="John Doe, Jane Smith"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
+                <Input
+                  id="category"
                   value={editedArticle.category || ""}
-                  onValueChange={(value) => setEditedArticle({ ...editedArticle, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => setEditedArticle({ ...editedArticle, category: e.target.value })}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
-                  value={editedArticle.status || ""}
-                  onValueChange={(value) => setEditedArticle({ ...editedArticle, status: value as any })}
+                  value={editedArticle.status || "draft"}
+                  onValueChange={(value) => setEditedArticle({ ...editedArticle, status: value as "published" | "draft" })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -369,9 +456,17 @@ export default function ArticleList() {
                   <SelectContent>
                     <SelectItem value="published">Published</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="excerpt">Excerpt</Label>
+                <Textarea
+                  id="excerpt"
+                  value={editedArticle.excerpt || ""}
+                  onChange={(e) => setEditedArticle({ ...editedArticle, excerpt: e.target.value })}
+                  rows={3}
+                />
               </div>
             </div>
           )}
@@ -391,7 +486,7 @@ export default function ArticleList() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the article
-              "{currentArticle?.title}" from our servers.
+              "{currentArticle?.title}" from the database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -416,14 +511,26 @@ export default function ArticleList() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">Author</Label>
-                  <p>{currentArticle.author}</p>
+                  <Label className="text-muted-foreground">Authors</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {currentArticle.authors.map((author, index) => (
+                      <Badge key={index} variant="secondary">
+                        {author}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Category</Label>
                   <p>{currentArticle.category}</p>
                 </div>
               </div>
+              {currentArticle.subcategory && (
+                <div>
+                  <Label className="text-muted-foreground">Subcategory</Label>
+                  <p>{currentArticle.subcategory}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
@@ -432,8 +539,8 @@ export default function ArticleList() {
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Publish Date</Label>
-                  <p>{currentArticle.publishDate}</p>
+                  <Label className="text-muted-foreground">Created</Label>
+                  <p>{formatDate(currentArticle.createdAt)}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -442,9 +549,19 @@ export default function ArticleList() {
                   <p>{currentArticle.views}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Likes</Label>
-                  <p>{currentArticle.likes}</p>
+                  <Label className="text-muted-foreground">Tags</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {currentArticle.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Excerpt</Label>
+                <p className="mt-1 text-sm">{currentArticle.excerpt}</p>
               </div>
             </div>
           )}

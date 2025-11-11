@@ -57,6 +57,8 @@ export default function ArticleCreation() {
   const [isPublished, setIsPublished] = useState(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [pendingSubmission, setPendingSubmission] = useState<{
     title: string;
     content: string;
@@ -69,6 +71,7 @@ export default function ArticleCreation() {
     isPublished: boolean;
   } | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
+  
   const availableTags = useMemo(() => tagData as string[], []);
   const availableAuthors = useMemo(() => authorData as string[], []);
   const mediaLibrary = useMemo(() => mediaLibraryData as MediaItem[], []);
@@ -181,32 +184,158 @@ export default function ArticleCreation() {
     setConfirmOpen(true);
   };
 
-  const handleSubmitOnConfirm = () => {
+  const handleSubmitOnConfirm = async () => {
     if (!pendingSubmission) {
       return;
     }
 
-    // console.log(pendingSubmission);
-    // TODO: Handle article creation logic
+    setIsSubmitting(true);
+    setSubmitMessage(null);
 
-    setTitle("");
-    setContent(undefined);
-    setContentText("");
-    setExcerpt("");
-    setCategory("");
-    setSubcategory("");
-    setSelectedTags([]);
-    setSelectedAuthors([]);
-    setFeaturedMediaId(null);
-    setIsPublished(false);
-    setEditorResetKey((prev) => prev + 1);
-    setFormErrors({});
-    setPendingSubmission(null);
-    setConfirmOpen(false);
+    try {
+      const response = await fetch('http://localhost:5050/api/articles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: pendingSubmission.title,
+          content: pendingSubmission.content,
+          excerpt: pendingSubmission.excerpt,
+          category: pendingSubmission.category,
+          subcategory: pendingSubmission.subcategory,
+          tags: pendingSubmission.tags,
+          authors: pendingSubmission.authors,
+          featuredMediaId: pendingSubmission.featuredMedia?.id,
+          featuredMediaUrl: pendingSubmission.featuredMedia?.url,
+          isPublished: pendingSubmission.isPublished,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitMessage({
+          type: 'success',
+          message: `Article "${pendingSubmission.title}" has been ${pendingSubmission.isPublished ? 'published' : 'saved as draft'} successfully!`
+        });
+
+        // Reset form
+        setTitle("");
+        setContent(undefined);
+        setContentText("");
+        setExcerpt("");
+        setCategory("");
+        setSubcategory("");
+        setSelectedTags([]);
+        setSelectedAuthors([]);
+        setFeaturedMediaId(null);
+        setIsPublished(false);
+        setEditorResetKey((prev) => prev + 1);
+        setFormErrors({});
+      } else {
+        setSubmitMessage({
+          type: 'error',
+          message: result.message || "Failed to create article. Please try again."
+        });
+      }
+    } catch (error) {
+      console.error('Error creating article:', error);
+      setSubmitMessage({
+        type: 'error',
+        message: "Network error. Please check your connection and try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+      setPendingSubmission(null);
+      setConfirmOpen(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    // Validate required fields for draft
+    if (!title.trim() || isContentEmpty || !category) {
+      setSubmitMessage({
+        type: 'error',
+        message: "Title, content, and category are required even for drafts."
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const response = await fetch('http://localhost:5050/api/articles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          content: serializedContent,
+          excerpt,
+          category,
+          subcategory,
+          tags: selectedTags,
+          authors: selectedAuthors,
+          featuredMediaId: selectedMedia?.id,
+          featuredMediaUrl: selectedMedia?.url,
+          isPublished: false,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitMessage({
+          type: 'success',
+          message: `Draft "${title}" has been saved successfully!`
+        });
+
+        // Reset form
+        setTitle("");
+        setContent(undefined);
+        setContentText("");
+        setExcerpt("");
+        setCategory("");
+        setSubcategory("");
+        setSelectedTags([]);
+        setSelectedAuthors([]);
+        setFeaturedMediaId(null);
+        setIsPublished(false);
+        setEditorResetKey((prev) => prev + 1);
+        setFormErrors({});
+      } else {
+        setSubmitMessage({
+          type: 'error',
+          message: result.message || "Failed to save draft. Please try again."
+        });
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      setSubmitMessage({
+        type: 'error',
+        message: "Network error. Please check your connection and try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="container mx-auto p-6">
+      {/* Success/Error Message */}
+      {submitMessage && (
+        <div className={`mb-4 p-4 rounded-md ${
+          submitMessage.type === 'success' 
+            ? 'bg-green-50 border border-green-200 text-green-800' 
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {submitMessage.message}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Create New Article</CardTitle>
@@ -276,18 +405,6 @@ export default function ArticleCreation() {
                   placeholder="Choose featured media"
                   error={Boolean(formErrors.featuredMedia)}
                 />
-                <input
-                  type="hidden"
-                  name="featuredMediaId"
-                  value={featuredMediaId ?? ""}
-                  required
-                />
-                <input
-                  type="hidden"
-                  name="featuredMediaUrl"
-                  value={selectedMedia?.url ?? ""}
-                  required
-                />
                 {formErrors.featuredMedia && (
                   <p className="text-xs text-destructive">{formErrors.featuredMedia}</p>
                 )}
@@ -338,12 +455,6 @@ export default function ArticleCreation() {
                     className={cn(
                       formErrors.authors && "border-destructive focus-within:ring-destructive"
                     )}
-                  />
-                  <input
-                    type="hidden"
-                    name="authors"
-                    value={selectedAuthors.join(",")}
-                    required
                   />
                   {formErrors.authors && (
                     <p className="text-xs text-destructive">{formErrors.authors}</p>
@@ -407,7 +518,6 @@ export default function ArticleCreation() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <input type="hidden" name="category" value={category} required />
                     {formErrors.category && (
                       <p className="text-xs text-destructive">{formErrors.category}</p>
                     )}
@@ -416,7 +526,7 @@ export default function ArticleCreation() {
                   <div className="space-y-2">
                     <Label htmlFor="subcategory">
                       Sub-category
-                      <Tooltip >
+                      <Tooltip>
                         <TooltipTrigger>
                           <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/50 text-[10px] text-muted-foreground cursor-help">
                             ?
@@ -456,18 +566,11 @@ export default function ArticleCreation() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <input
-                      type="hidden"
-                      name="subcategory"
-                      value={subcategory}
-                      required={isSubcategoryRequired}
-                    />
                     {formErrors.subcategory && (
                       <p className="text-xs text-destructive">{formErrors.subcategory}</p>
                     )}
                   </div>
                 </div>
-
 
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -479,9 +582,16 @@ export default function ArticleCreation() {
                 </div>
 
                 <div className="flex gap-4">
-                  <Button type="submit">Create Article</Button>
-                  <Button type="button" variant="outline">
-                    Save Draft
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Creating..." : "Create Article"}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleSaveDraft}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Save Draft"}
                   </Button>
                 </div>
               </div>
@@ -502,8 +612,6 @@ export default function ArticleCreation() {
                     formErrors.tags && "border-destructive focus-within:ring-destructive"
                   )}
                 />
-                {/* for form submission, selected tags sent as a single string */}
-                <input type="hidden" name="tags" value={selectedTags.join(",")} required />
                 {formErrors.tags && (
                   <p className="text-xs text-destructive">{formErrors.tags}</p>
                 )}
@@ -547,15 +655,18 @@ export default function ArticleCreation() {
           <AlertDialogHeader>
             <AlertDialogTitle>Submit this article?</AlertDialogTitle>
             <AlertDialogDescription>
-              Once confirmed, the article will be submitted with the details shown above.
+              Once confirmed, the article will be {pendingSubmission?.isPublished ? 'published immediately' : 'saved as draft'}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingSubmission(null)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmitOnConfirm}>
-              Confirm submission
+            <AlertDialogAction 
+              onClick={handleSubmitOnConfirm}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Confirm submission"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
