@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { $getRoot, type SerializedEditorState } from "lexical";
 
 import { Editor } from "@/components/blocks/editor-00/editor";
@@ -28,11 +28,40 @@ import {
 import { cn } from "@/lib/utils";
 
 import { MediaPicker, type MediaItem } from "@/components/media/media-picker";
-import categoriesData from "@/data/categories.json";
-import subcategoriesData from "@/data/subcategories.json";
-import tagData from "@/data/tags.json";
-import authorData from "@/data/authors.json";
+// Remove hardcoded imports
+// import categoriesData from "@/data/categories.json";
+// import subcategoriesData from "@/data/subcategories.json";
+// import tagData from "@/data/tags.json";
+// import authorData from "@/data/authors.json";
 import mediaLibraryData from "@/data/media-library.json";
+
+// Define types for fetched data
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+}
+
+interface Tag {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color: string;
+  isActive: boolean;
+}
+
+interface Author {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  role: string;
+  status: string;
+}
 
 type FieldErrorKey =
   | "title"
@@ -72,23 +101,95 @@ export default function ArticleCreation() {
   } | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
   
-  const availableTags = useMemo(() => tagData as string[], []);
-  const availableAuthors = useMemo(() => authorData as string[], []);
-  const mediaLibrary = useMemo(() => mediaLibraryData as MediaItem[], []);
-  const subcategoriesBySlug = useMemo(() => {
-    const entries = Object.entries(subcategoriesData as Record<string, string[]>);
-    return entries.reduce<Record<string, string[]>>((acc, [categoryName, subcategories]) => {
-      const matchedCategory = categoriesData.find((cat) => cat.name === categoryName);
-      if (matchedCategory) {
-        acc[matchedCategory.slug] = subcategories;
+  // State for fetched data
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const API_BASE_URL = 'http://localhost:5050/api';
+
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setFetchError(null);
+
+        // Fetch categories
+        const categoriesResponse = await fetch(`${API_BASE_URL}/categories?isActive=true`);
+        const categoriesData = await categoriesResponse.json();
+        
+        if (categoriesData.success) {
+          setCategories(categoriesData.data);
+        } else {
+          throw new Error(categoriesData.message || 'Failed to fetch categories');
+        }
+
+        // Fetch tags
+        const tagsResponse = await fetch(`${API_BASE_URL}/tags?isActive=true`);
+        const tagsData = await tagsResponse.json();
+        
+        if (tagsData.success) {
+          setTags(tagsData.data);
+        } else {
+          throw new Error(tagsData.message || 'Failed to fetch tags');
+        }
+
+        // Fetch users (authors) - only active users
+        const usersResponse = await fetch(`${API_BASE_URL}/users?status=active&role=admin,manager,superadmin`);
+        const usersData = await usersResponse.json();
+        
+        if (usersData.success) {
+          setAuthors(usersData.data);
+        } else {
+          throw new Error(usersData.message || 'Failed to fetch authors');
+        }
+
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        setFetchError(error.message || 'Failed to load form data');
+      } finally {
+        setIsLoading(false);
       }
-      return acc;
-    }, {});
+    };
+
+    fetchData();
   }, []);
+
+  // Transform data for frontend use
+  const availableTags = useMemo(() => 
+    tags.map(tag => tag.name), [tags]);
+
+  const availableAuthors = useMemo(() => 
+    authors.map(author => `${author.firstName} ${author.lastName}`), [authors]);
+
+  const categoriesData = useMemo(() => 
+    categories.map(cat => ({
+      id: cat._id,
+      name: cat.name,
+      slug: cat.slug
+    })), [categories]);
+
+  const mediaLibrary = useMemo(() => mediaLibraryData as MediaItem[], []);
+  
+  // For now, keep subcategories hardcoded or fetch from your backend if available
+  const subcategoriesBySlug = useMemo(() => {
+    // You can modify this to fetch subcategories from your backend if available
+    const hardcodedSubcategories: Record<string, string[]> = {
+      "technology": ["Web Development", "Mobile Development", "AI/ML"],
+      "business": ["Startups", "Marketing", "Finance"],
+      "lifestyle": ["Health", "Travel", "Food"]
+    };
+    return hardcodedSubcategories;
+  }, []);
+
   const availableSubcategories = useMemo(
     () => subcategoriesBySlug[category] ?? [],
     [category, subcategoriesBySlug],
   );
+  
   const isSubcategoryRequired = availableSubcategories.length > 0;
   const subcategoryPlaceholder = useMemo(() => {
     if (!category) {
@@ -99,6 +200,7 @@ export default function ArticleCreation() {
     }
     return "Select sub-category";
   }, [category, isSubcategoryRequired]);
+  
   const selectedMedia = useMemo(
     () => mediaLibrary.find((item) => item.id === featuredMediaId) ?? null,
     [mediaLibrary, featuredMediaId],
@@ -193,7 +295,17 @@ export default function ArticleCreation() {
     setSubmitMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5050/api/articles', {
+      // Find the actual category and tag IDs from the selected names
+      const selectedCategory = categories.find(cat => cat.slug === pendingSubmission.category);
+      const selectedTagIds = tags
+        .filter(tag => pendingSubmission.tags.includes(tag.name))
+        .map(tag => tag._id);
+      
+      const selectedAuthorIds = authors
+        .filter(author => pendingSubmission.authors.includes(`${author.firstName} ${author.lastName}`))
+        .map(author => author._id);
+
+      const response = await fetch(`${API_BASE_URL}/articles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,10 +314,10 @@ export default function ArticleCreation() {
           title: pendingSubmission.title,
           content: pendingSubmission.content,
           excerpt: pendingSubmission.excerpt,
-          category: pendingSubmission.category,
+          category: selectedCategory?._id, // Send category ID
           subcategory: pendingSubmission.subcategory,
-          tags: pendingSubmission.tags,
-          authors: pendingSubmission.authors,
+          tags: selectedTagIds, // Send tag IDs
+          authors: selectedAuthorIds, // Send author IDs
           featuredMediaId: pendingSubmission.featuredMedia?.id,
           featuredMediaUrl: pendingSubmission.featuredMedia?.url,
           isPublished: pendingSubmission.isPublished,
@@ -266,7 +378,17 @@ export default function ArticleCreation() {
     setSubmitMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5050/api/articles', {
+      // Find the actual category and tag IDs from the selected names
+      const selectedCategory = categories.find(cat => cat.slug === category);
+      const selectedTagIds = tags
+        .filter(tag => selectedTags.includes(tag.name))
+        .map(tag => tag._id);
+      
+      const selectedAuthorIds = authors
+        .filter(author => selectedAuthors.includes(`${author.firstName} ${author.lastName}`))
+        .map(author => author._id);
+
+      const response = await fetch(`${API_BASE_URL}/articles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,10 +397,10 @@ export default function ArticleCreation() {
           title,
           content: serializedContent,
           excerpt,
-          category,
+          category: selectedCategory?._id,
           subcategory,
-          tags: selectedTags,
-          authors: selectedAuthors,
+          tags: selectedTagIds,
+          authors: selectedAuthorIds,
           featuredMediaId: selectedMedia?.id,
           featuredMediaUrl: selectedMedia?.url,
           isPublished: false,
@@ -322,6 +444,52 @@ export default function ArticleCreation() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Article</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading form data...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Article</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+              <p className="font-medium">Error loading form data</p>
+              <p className="text-sm mt-1">{fetchError}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-2"
+                variant="outline"
+                size="sm"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">

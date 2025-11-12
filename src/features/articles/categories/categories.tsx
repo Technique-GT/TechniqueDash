@@ -6,14 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, FileText } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Edit, Trash2, Search, FileText, Eye, EyeOff } from "lucide-react";
 
 interface Category {
   _id: string;
   name: string;
   slug: string;
   description?: string;
-  articleCount: number;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,17 +22,20 @@ interface Category {
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    description: ""
+    description: "",
+    isActive: true
   });
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalCategories: 0,
-    totalArticles: 0,
-    averageArticles: 0
+    activeCategories: 0,
+    inactiveCategories: 0
   });
 
   // Fetch categories on component mount
@@ -42,17 +46,22 @@ export default function Categories() {
 
   const fetchCategories = async () => {
     try {
+      setIsLoading(true);
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
+      if (showInactive) params.append('isActive', 'false');
 
       const response = await fetch(`http://localhost:5050/api/categories?${params}`);
       const data = await response.json();
       
       if (data.success) {
         setCategories(data.data);
+      } else {
+        setError(data.message || 'Failed to fetch categories');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setError('Network error. Please check your connection.');
     } finally {
       setIsLoading(false);
     }
@@ -72,49 +81,81 @@ export default function Categories() {
   };
 
   const handleAddCategory = async () => {
-    if (formData.name.trim()) {
-      try {
-        const url = editingCategory 
-          ? `http://localhost:5050/api/categories/${editingCategory._id}`
-          : 'http://localhost:5050/api/categories';
-        
-        const method = editingCategory ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-          await fetchCategories();
-          await fetchStats();
-          resetForm();
-          setIsDialogOpen(false);
-        } else {
-          alert(data.message || `Error ${editingCategory ? 'updating' : 'adding'} category`);
-        }
-      } catch (error) {
-        console.error(`Error ${editingCategory ? 'updating' : 'adding'} category:`, error);
-        alert(`Error ${editingCategory ? 'updating' : 'adding'} category`);
-      }
-    }
-  };
-
-  const handleDeleteCategory = async (id: string, articleCount: number) => {
-    if (articleCount > 0) {
-      alert('Cannot delete category that has articles. Please reassign articles first.');
+    if (!formData.name.trim()) {
+      setError('Category name is required');
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) return;
+    try {
+      setError(null);
+      const url = editingCategory 
+        ? `http://localhost:5050/api/categories/${editingCategory._id}`
+        : 'http://localhost:5050/api/categories';
+      
+      const method = editingCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          isActive: formData.isActive
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchCategories();
+        await fetchStats();
+        resetForm();
+        setIsDialogOpen(false);
+      } else {
+        // Show the actual error from the backend
+        setError(data.message || data.errors?.join(', ') || `Error ${editingCategory ? 'updating' : 'adding'} category`);
+      }
+    } catch (error) {
+      console.error(`Error ${editingCategory ? 'updating' : 'adding'} category:`, error);
+      setError(`Error ${editingCategory ? 'updating' : 'adding'} category`);
+    }
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    if (!confirm(`Are you sure you want to ${category.isActive ? 'deactivate' : 'activate'} this category?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/categories/${id}`, {
+      const response = await fetch(`http://localhost:5050/api/categories/${category._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isActive: !category.isActive
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchCategories();
+        await fetchStats();
+      } else {
+        alert(data.message || `Error ${category.isActive ? 'deactivating' : 'activating'} category`);
+      }
+    } catch (error) {
+      console.error(`Error ${category.isActive ? 'deactivating' : 'activating'} category:`, error);
+      alert(`Error ${category.isActive ? 'deactivating' : 'activating'} category`);
+    }
+  };
+
+  const handleHardDelete = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this category? This action cannot be undone.')) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/categories/${categoryId}/hard`, {
         method: 'DELETE',
       });
 
@@ -135,9 +176,11 @@ export default function Categories() {
   const openEditDialog = (category: Category) => {
     setFormData({
       name: category.name,
-      description: category.description || ""
+      description: category.description || "",
+      isActive: category.isActive
     });
     setEditingCategory(category);
+    setError(null);
     setIsDialogOpen(true);
   };
 
@@ -149,9 +192,11 @@ export default function Categories() {
   const resetForm = () => {
     setFormData({
       name: "",
-      description: ""
+      description: "",
+      isActive: true
     });
     setEditingCategory(null);
+    setError(null);
   };
 
   // Debounced search
@@ -161,7 +206,7 @@ export default function Categories() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, showInactive]);
 
   if (isLoading) {
     return (
@@ -185,6 +230,13 @@ export default function Categories() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -200,23 +252,23 @@ export default function Categories() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active Categories</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalArticles}</div>
-            <p className="text-xs text-muted-foreground">Across all categories</p>
+            <div className="text-2xl font-bold">{stats.activeCategories}</div>
+            <p className="text-xs text-muted-foreground">Currently active</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Articles</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Inactive Categories</CardTitle>
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(stats.averageArticles)}</div>
-            <p className="text-xs text-muted-foreground">Per category</p>
+            <div className="text-2xl font-bold">{stats.inactiveCategories}</div>
+            <p className="text-xs text-muted-foreground">Currently inactive</p>
           </CardContent>
         </Card>
       </div>
@@ -227,8 +279,8 @@ export default function Categories() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
                 <Label htmlFor="search-categories" className="sr-only">
                   Search Categories
                 </Label>
@@ -241,6 +293,18 @@ export default function Categories() {
                 />
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-inactive"
+                  checked={showInactive}
+                  onCheckedChange={setShowInactive}
+                />
+                <Label htmlFor="show-inactive" className="text-sm">
+                  Show Inactive
+                </Label>
+              </div>
+
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={openCreateDialog}>
@@ -260,14 +324,23 @@ export default function Categories() {
                       }
                     </DialogDescription>
                   </DialogHeader>
+                  
+                  {/* Show error in dialog if any */}
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="name">Category Name</Label>
+                      <Label htmlFor="name">Category Name *</Label>
                       <Input
                         id="name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Enter category name"
+                        required
                       />
                     </div>
                     <div className="grid gap-2">
@@ -279,6 +352,18 @@ export default function Categories() {
                         placeholder="Enter category description"
                       />
                     </div>
+                    {editingCategory && (
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="isActive"
+                          checked={formData.isActive}
+                          onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                        />
+                        <Label htmlFor="isActive" className="text-sm">
+                          Active Category
+                        </Label>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -295,39 +380,35 @@ export default function Categories() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Status</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>Articles</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {categories.map((category) => (
-                  <TableRow key={category._id}>
+                  <TableRow key={category._id} className={!category.isActive ? "bg-muted/50" : ""}>
+                    <TableCell>
+                      <Badge variant={category.isActive ? "default" : "secondary"}>
+                        {category.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {category.name}
-                        {category.articleCount > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {category.articleCount}
-                          </Badge>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-sm">
                       {category.slug}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <span className={category.articleCount > 0 ? "font-medium" : "text-muted-foreground"}>
-                          {category.articleCount}
-                        </span>
-                      </div>
-                    </TableCell>
                     <TableCell className="text-muted-foreground max-w-[200px] truncate">
                       {category.description || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(category.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -339,11 +420,18 @@ export default function Categories() {
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
+                          variant={category.isActive ? "secondary" : "default"}
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category)}
+                          title={category.isActive ? "Deactivate category" : "Activate category"}
+                        >
+                          {category.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                        <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteCategory(category._id, category.articleCount)}
-                          disabled={category.articleCount > 0}
-                          title={category.articleCount > 0 ? "Cannot delete category with articles" : "Delete category"}
+                          onClick={() => handleHardDelete(category._id)}
+                          title="Permanently delete category"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -353,7 +441,7 @@ export default function Categories() {
                 ))}
                 {categories.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="text-center">
                         <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                         <p className="text-muted-foreground">No categories found</p>

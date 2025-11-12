@@ -4,8 +4,7 @@ export interface ICategory extends Document {
   name: string;
   slug: string;
   description?: string;
-  articleCount: number;
-  userId: mongoose.Types.ObjectId;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,8 +14,7 @@ const CategorySchema: Schema = new Schema({
     type: String,
     required: [true, 'Category name is required'],
     trim: true,
-    maxlength: [50, 'Category name cannot exceed 50 characters'],
-    unique: true
+    maxlength: [50, 'Category name cannot exceed 50 characters']
   },
   slug: {
     type: String,
@@ -28,26 +26,21 @@ const CategorySchema: Schema = new Schema({
     type: String,
     maxlength: [200, 'Description cannot exceed 200 characters']
   },
-  articleCount: {
-    type: Number,
-    default: 0
-  },
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
 });
 
 // Index for better query performance
-CategorySchema.index({ userId: 1, name: 1 });
 CategorySchema.index({ slug: 1 });
+CategorySchema.index({ isActive: 1 });
 
-// Pre-save middleware to generate slug
+// Pre-save middleware to generate slug if not provided
 CategorySchema.pre<ICategory>('save', function(next) {
-  if (this.isModified('name')) {
+  if (this.isModified('name') && !this.slug) {
     this.slug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9 -]/g, '')

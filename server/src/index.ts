@@ -2,7 +2,11 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import articleRoutes from './routes/article.routes'; // Add this import
+import articleRoutes from './routes/article.routes';
+import categoryRoutes from './routes/category.routes';
+import tagRoutes from './routes/tag.routes';
+import userRoutes from './routes/user.routes';
+import mediaRoutes from './routes/media.routes'; // Add this import
 
 dotenv.config();
 
@@ -14,10 +18,17 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' })); // Increase limit for article content
+app.use(express.json({ limit: '10mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static('uploads'));
 
 // Routes
-app.use('/api/articles', articleRoutes); // Add this line
+app.use('/api/articles', articleRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/tags', tagRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/media', mediaRoutes); // Add this line
 
 // Simple health check
 app.get('/api/health', (_req, res) => {

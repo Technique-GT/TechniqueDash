@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { IconAlertTriangle } from '@tabler/icons-react'
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { User } from '../data/schema'
+import { useUsers } from '../context/users-context'
 
 interface Props {
   open: boolean
@@ -17,12 +17,33 @@ interface Props {
 
 export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const [value, setValue] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const { refetchUsers } = useUsers()
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (value.trim() !== currentRow.username) return
 
-    onOpenChange(false)
-    showSubmittedData(currentRow, 'The following user has been deleted:')
+    setDeleting(true)
+    try {
+      const API_BASE_URL = 'http://localhost:5050/api'
+      
+      // Use _id for the API call
+      const response = await fetch(`${API_BASE_URL}/users/${currentRow._id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete user')
+      }
+      
+      await refetchUsers()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      // You might want to show an error toast here
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -30,7 +51,7 @@ export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={value.trim() !== currentRow.username}
+      disabled={value.trim() !== currentRow.username || deleting}
       title={
         <span className='text-destructive'>
           <IconAlertTriangle
@@ -65,12 +86,12 @@ export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
           <Alert variant='destructive'>
             <AlertTitle>Warning!</AlertTitle>
             <AlertDescription>
-              Please be carefull, this operation can not be rolled back.
+              Please be careful, this operation cannot be rolled back.
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={deleting ? 'Deleting...' : 'Delete'}
       destructive
     />
   )

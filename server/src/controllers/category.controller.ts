@@ -10,38 +10,46 @@ const toObjectId = (id: string | undefined): mongoose.Types.ObjectId | null => {
   return new mongoose.Types.ObjectId(id);
 };
 
+// Helper function to generate slug
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+};
+
 export const createCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description } = req.body;
-    const userId = (req as any).user?.id;
+    const { name, description, slug, isActive } = req.body;
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
+    // Generate slug if not provided
+    const categorySlug = slug || generateSlug(name);
 
-    // Check if category already exists
-    const existingCategory = await Category.findOne({ 
-      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    // Check if category already exists by name or slug
+    const existingCategory = await Category.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${name}$`, 'i') } },
+        { slug: categorySlug }
+      ]
     });
 
     if (existingCategory) {
       res.status(409).json({
         success: false,
-        message: 'Category with this name already exists'
+        message: 'Category with this name or slug already exists'
       });
       return;
     }
 
-    const category: ICategory = new Category({
+    const categoryData: any = {
       name: name.trim(),
+      slug: categorySlug,
       description,
-      userId: new mongoose.Types.ObjectId(userId)
-    });
+      isActive: isActive !== undefined ? isActive : true
+    };
 
+    const category: ICategory = new Category(categoryData);
     await category.save();
     
     res.status(201).json({
@@ -60,7 +68,7 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
     } else if (error.code === 11000) {
       res.status(409).json({
         success: false,
-        message: 'Category with this name already exists'
+        message: 'Category with this slug already exists'
       });
     } else {
       res.status(500).json({
@@ -74,27 +82,26 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
 
 export const getCategories = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
-    const { search } = req.query;
+    const { search, isActive } = req.query;
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    let query: any = { userId: new mongoose.Types.ObjectId(userId) };
+    let query: any = {};
 
     // Add search filter
     if (search && typeof search === 'string') {
       const searchRegex = new RegExp(search, 'i');
-      query.name = searchRegex;
+      query.$or = [
+        { name: searchRegex },
+        { description: searchRegex }
+      ];
+    }
+
+    // Filter by active status
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
     }
 
     const categories = await Category.find(query)
-      .sort({ articleCount: -1, name: 1 })
+      .sort({ name: 1 })
       .select('-__v');
 
     res.status(200).json({
@@ -113,7 +120,6 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
 
 export const getCategoryById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
 
     if (!objectId) {
@@ -124,18 +130,34 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
+    const category = await Category.findById(objectId);
+    
+    if (!category) {
+      res.status(404).json({
         success: false,
-        message: 'User not authenticated'
+        message: 'Category not found'
       });
       return;
     }
 
-    const category = await Category.findOne({ 
-      _id: objectId, 
-      userId: new mongoose.Types.ObjectId(userId) 
+    res.status(200).json({
+      success: true,
+      data: category
     });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching category',
+      error: error.message
+    });
+  }
+};
+
+export const getCategoryBySlug = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { slug } = req.params;
+
+    const category = await Category.findOne({ slug });
     
     if (!category) {
       res.status(404).json({
@@ -160,9 +182,8 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
 
 export const updateCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
-    const { name, description } = req.body;
+    const { name, description, slug, isActive } = req.body;
 
     if (!objectId) {
       res.status(400).json({
@@ -172,25 +193,26 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
+    // Generate new slug if name is being updated and slug is not provided
+    let categorySlug = slug;
+    if (name && !slug) {
+      categorySlug = generateSlug(name);
     }
 
-    // Check if new name conflicts with existing categories
-    if (name) {
+    // Check if new name or slug conflicts with existing categories
+    if (name || categorySlug) {
       const existingCategory = await Category.findOne({
-        name: { $regex: new RegExp(`^${name}$`, 'i') },
+        $or: [
+          { name: name ? { $regex: new RegExp(`^${name}$`, 'i') } : undefined },
+          { slug: categorySlug }
+        ].filter(condition => condition !== undefined),
         _id: { $ne: objectId }
       });
 
       if (existingCategory) {
         res.status(409).json({
           success: false,
-          message: 'Category with this name already exists'
+          message: 'Category with this name or slug already exists'
         });
         return;
       }
@@ -199,9 +221,11 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
     const updateData: any = {};
     if (name) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description;
+    if (categorySlug) updateData.slug = categorySlug;
+    if (isActive !== undefined) updateData.isActive = isActive;
 
-    const category = await Category.findOneAndUpdate(
-      { _id: objectId, userId: new mongoose.Types.ObjectId(userId) },
+    const category = await Category.findByIdAndUpdate(
+      objectId,
       updateData,
       { new: true, runValidators: true }
     );
@@ -230,7 +254,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
     } else if (error.code === 11000) {
       res.status(409).json({
         success: false,
-        message: 'Category with this name already exists'
+        message: 'Category with this slug already exists'
       });
     } else {
       res.status(500).json({
@@ -244,7 +268,6 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
 
 export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
 
     if (!objectId) {
@@ -255,18 +278,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    const category = await Category.findOne({ 
-      _id: objectId, 
-      userId: new mongoose.Types.ObjectId(userId) 
-    });
+    const category = await Category.findById(objectId);
     
     if (!category) {
       res.status(404).json({
@@ -276,20 +288,12 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Check if category has articles
-    if (category.articleCount > 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Cannot delete category that has articles. Please reassign articles first.'
-      });
-      return;
-    }
-
-    await Category.findByIdAndDelete(objectId);
+    // Instead of deleting, deactivate the category
+    await Category.findByIdAndUpdate(objectId, { isActive: false });
 
     res.status(200).json({
       success: true,
-      message: 'Category deleted successfully'
+      message: 'Category deactivated successfully'
     });
   } catch (error: any) {
     res.status(500).json({
@@ -300,36 +304,62 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const getCategoryStats = async (req: Request, res: Response): Promise<void> => {
+export const hardDeleteCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
+    const objectId = toObjectId(req.params.id);
 
-    if (!userId) {
-      res.status(401).json({
+    if (!objectId) {
+      res.status(400).json({
         success: false,
-        message: 'User not authenticated'
+        message: 'Invalid category ID'
       });
       return;
     }
 
+    const category = await Category.findByIdAndDelete(objectId);
+
+    if (!category) {
+      res.status(404).json({
+        success: false,
+        message: 'Category not found'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Category permanently deleted successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting category',
+      error: error.message
+    });
+  }
+};
+
+export const getCategoryStats = async (_req: Request, res: Response): Promise<void> => {
+  try {
     const stats = await Category.aggregate([
-      {
-        $match: { userId: new mongoose.Types.ObjectId(userId) }
-      },
       {
         $group: {
           _id: null,
           totalCategories: { $sum: 1 },
-          totalArticles: { $sum: '$articleCount' },
-          averageArticles: { $avg: '$articleCount' }
+          activeCategories: {
+            $sum: { $cond: ['$isActive', 1, 0] }
+          },
+          inactiveCategories: {
+            $sum: { $cond: ['$isActive', 0, 1] }
+          }
         }
       }
     ]);
 
     const categoryStats = stats[0] || {
       totalCategories: 0,
-      totalArticles: 0,
-      averageArticles: 0
+      activeCategories: 0,
+      inactiveCategories: 0
     };
 
     res.status(200).json({

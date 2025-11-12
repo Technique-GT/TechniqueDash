@@ -5,8 +5,7 @@ export interface ITag extends Document {
   slug: string;
   description?: string;
   color?: string;
-  articleCount: number;
-  userId: mongoose.Types.ObjectId;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,8 +15,7 @@ const TagSchema: Schema = new Schema({
     type: String,
     required: [true, 'Tag name is required'],
     trim: true,
-    maxlength: [50, 'Tag name cannot exceed 50 characters'],
-    unique: true
+    maxlength: [50, 'Tag name cannot exceed 50 characters']
   },
   slug: {
     type: String,
@@ -34,26 +32,21 @@ const TagSchema: Schema = new Schema({
     default: '#6B7280', // Default gray color
     match: [/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Color must be a valid hex color']
   },
-  articleCount: {
-    type: Number,
-    default: 0
-  },
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
 });
 
 // Index for better query performance
-TagSchema.index({ userId: 1, name: 1 });
 TagSchema.index({ slug: 1 });
+TagSchema.index({ isActive: 1 });
 
-// Pre-save middleware to generate slug with proper TypeScript typing
+// Pre-save middleware to generate slug
 TagSchema.pre<ITag>('save', function(next) {
-  if (this.isModified('name')) {
+  if (this.isModified('name') && !this.slug) {
     this.slug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9 -]/g, '')
