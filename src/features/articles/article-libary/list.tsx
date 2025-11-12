@@ -331,16 +331,25 @@ export default function ArticleList() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {article.authors.slice(0, 2).map((author, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {author}
-                              </Badge>
-                            ))}
-                            {article.authors.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{article.authors.length - 2} more
-                              </Badge>
-                            )}
+                            {Array.isArray(article.authors) && article.authors.length > 0 ? (
+                            <>
+                              {article.authors.slice(0, 2).map((author, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {author}
+                                </Badge>
+                              ))}
+                              {article.authors.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{article.authors.length - 2} more
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Unknown
+                            </Badge>
+                          )}
+
                           </div>
                         </TableCell>
                         <TableCell>{article.category}</TableCell>
