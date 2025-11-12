@@ -28,13 +28,13 @@ export const userTypes = [
     icon: IconUserShield,
   },
   {
-    label: 'Manager',
-    value: 'manager',
+    label: 'Editor',
+    value: 'editor',
     icon: IconUsersGroup,
   },
   {
-    label: 'Cashier',
-    value: 'cashier',
+    label: 'Writer',
+    value: 'writer',
     icon: IconCash,
   },
 ] as const

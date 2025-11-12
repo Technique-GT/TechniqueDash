@@ -11,8 +11,8 @@ export type UserStatus = z.infer<typeof userStatusSchema>
 const userRoleSchema = z.union([
   z.literal('superadmin'),
   z.literal('admin'),
-  z.literal('cashier'),
-  z.literal('manager'),
+  z.literal('writer'),
+  z.literal('editor'),
 ])
 
 // Update to use _id from MongoDB and add id for frontend compatibility
