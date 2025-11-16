@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Search, FileText, Eye, EyeOff, FolderOpen, FolderTree, ChevronDown, ChevronRight } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Category {
   _id: string;
@@ -19,7 +19,6 @@ interface Category {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  subCategories?: SubCategory[];
 }
 
 interface SubCategory {
@@ -48,7 +47,6 @@ export default function Categories() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingSubCategory, setEditingSubCategory] = useState<SubCategory | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<"categories" | "subcategories">("categories");
   
   const [categoryFormData, setCategoryFormData] = useState({
     name: "",
@@ -534,255 +532,250 @@ export default function Categories() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle>Manage Categories & Subcategories</CardTitle>
-            
-            {/* Tabs */}
-            <div className="flex space-x-1 bg-muted p-1 rounded-lg">
-              <Button
-                variant={activeTab === "categories" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveTab("categories")}
-                className="px-4"
-              >
-                <FolderOpen className="w-4 h-4 mr-2" />
-                Categories
-              </Button>
-              <Button
-                variant={activeTab === "subcategories" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveTab("subcategories")}
-                className="px-4"
-              >
-                <FolderTree className="w-4 h-4 mr-2" />
-                Subcategories
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Label htmlFor="search-categories" className="sr-only">
-                  Search {activeTab === "categories" ? "Categories" : "Subcategories"}
-                </Label>
-                <Input
-                  id="search-categories"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={`Search ${activeTab === "categories" ? "categories" : "subcategories"}...`}
-                  className="pl-10"
-                />
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="show-inactive"
-                  checked={showInactive}
-                  onCheckedChange={setShowInactive}
-                />
-                <Label htmlFor="show-inactive" className="text-sm">
-                  Show Inactive
-                </Label>
-              </div>
+          <Tabs defaultValue="categories" className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <TabsList>
+                <TabsTrigger value="categories" className="flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  Categories
+                </TabsTrigger>
+                <TabsTrigger value="subcategories" className="flex items-center gap-2">
+                  <FolderTree className="w-4 h-4" />
+                  Subcategories
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Category Dialog */}
-              <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={openCreateCategoryDialog}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Category
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingCategory ? 'Edit Category' : 'Add New Category'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingCategory 
-                        ? 'Update your category information.' 
-                        : 'Create a new category to organize your articles.'
-                      }
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md text-sm">
-                      {error}
-                    </div>
-                  )}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Label htmlFor="search-categories" className="sr-only">
+                    Search
+                  </Label>
+                  <Input
+                    id="search-categories"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search..."
+                    className="pl-10 w-full sm:w-64"
+                  />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="show-inactive"
+                    checked={showInactive}
+                    onCheckedChange={setShowInactive}
+                  />
+                  <Label htmlFor="show-inactive" className="text-sm">
+                    Show Inactive
+                  </Label>
+                </div>
 
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Category Name *</Label>
-                      <Input
-                        id="name"
-                        value={categoryFormData.name}
-                        onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
-                        placeholder="Enter category name"
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="description">Description (Optional)</Label>
-                      <Input
-                        id="description"
-                        value={categoryFormData.description}
-                        onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
-                        placeholder="Enter category description"
-                      />
-                    </div>
-                    {editingCategory && (
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="isActive"
-                          checked={categoryFormData.isActive}
-                          onCheckedChange={(checked) => setCategoryFormData({ ...categoryFormData, isActive: checked })}
-                        />
-                        <Label htmlFor="isActive" className="text-sm">
-                          Active Category
-                        </Label>
+                {/* Category Dialog */}
+                <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openCreateCategoryDialog}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Category
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingCategory ? 'Edit Category' : 'Add New Category'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingCategory 
+                          ? 'Update your category information.' 
+                          : 'Create a new category to organize your articles.'
+                        }
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md text-sm">
+                        {error}
                       </div>
                     )}
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddCategory}>
-                      {editingCategory ? 'Update Category' : 'Create Category'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
 
-              {/* SubCategory Dialog */}
-              <Dialog open={isSubCategoryDialogOpen} onOpenChange={setIsSubCategoryDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={openCreateSubCategoryDialog} variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Subcategory
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingSubCategory ? 'Edit Subcategory' : 'Add New Subcategory'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingSubCategory 
-                        ? 'Update your subcategory information.' 
-                        : 'Create a new subcategory under a parent category.'
-                      }
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="subcategory-name">Subcategory Name *</Label>
-                      <Input
-                        id="subcategory-name"
-                        value={subCategoryFormData.name}
-                        onChange={(e) => setSubCategoryFormData({ ...subCategoryFormData, name: e.target.value })}
-                        placeholder="Enter subcategory name"
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="subcategory-description">Description (Optional)</Label>
-                      <Input
-                        id="subcategory-description"
-                        value={subCategoryFormData.description}
-                        onChange={(e) => setSubCategoryFormData({ ...subCategoryFormData, description: e.target.value })}
-                        placeholder="Enter subcategory description"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="parent-category">Parent Category *</Label>
-                      <Select
-                        value={subCategoryFormData.category}
-                        onValueChange={(value) => setSubCategoryFormData({ ...subCategoryFormData, category: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a parent category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories
-                            .filter(cat => cat.isActive)
-                            .map((category) => (
-                            <SelectItem key={category._id} value={category._id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {editingSubCategory && (
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="subcategory-isActive"
-                          checked={subCategoryFormData.isActive}
-                          onCheckedChange={(checked) => setSubCategoryFormData({ ...subCategoryFormData, isActive: checked })}
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="name">Category Name *</Label>
+                        <Input
+                          id="name"
+                          value={categoryFormData.name}
+                          onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                          placeholder="Enter category name"
+                          required
                         />
-                        <Label htmlFor="subcategory-isActive" className="text-sm">
-                          Active Subcategory
-                        </Label>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="description">Description (Optional)</Label>
+                        <Input
+                          id="description"
+                          value={categoryFormData.description}
+                          onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
+                          placeholder="Enter category description"
+                        />
+                      </div>
+                      {editingCategory && (
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="isActive"
+                            checked={categoryFormData.isActive}
+                            onCheckedChange={(checked) => setCategoryFormData({ ...categoryFormData, isActive: checked })}
+                          />
+                          <Label htmlFor="isActive" className="text-sm">
+                            Active Category
+                          </Label>
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleAddCategory}>
+                        {editingCategory ? 'Update Category' : 'Create Category'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* SubCategory Dialog */}
+                <Dialog open={isSubCategoryDialogOpen} onOpenChange={setIsSubCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openCreateSubCategoryDialog} variant="outline">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Subcategory
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingSubCategory ? 'Edit Subcategory' : 'Add New Subcategory'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingSubCategory 
+                          ? 'Update your subcategory information.' 
+                          : 'Create a new subcategory under a parent category.'
+                        }
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md text-sm">
+                        {error}
                       </div>
                     )}
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsSubCategoryDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddSubCategory}>
-                      {editingSubCategory ? 'Update Subcategory' : 'Create Subcategory'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="subcategory-name">Subcategory Name *</Label>
+                        <Input
+                          id="subcategory-name"
+                          value={subCategoryFormData.name}
+                          onChange={(e) => setSubCategoryFormData({ ...subCategoryFormData, name: e.target.value })}
+                          placeholder="Enter subcategory name"
+                          required
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="subcategory-description">Description (Optional)</Label>
+                        <Input
+                          id="subcategory-description"
+                          value={subCategoryFormData.description}
+                          onChange={(e) => setSubCategoryFormData({ ...subCategoryFormData, description: e.target.value })}
+                          placeholder="Enter subcategory description"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="parent-category">Parent Category *</Label>
+                        <Select
+                          value={subCategoryFormData.category}
+                          onValueChange={(value) => setSubCategoryFormData({ ...subCategoryFormData, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a parent category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories
+                              .filter(cat => cat.isActive)
+                              .map((category) => (
+                              <SelectItem key={category._id} value={category._id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {editingSubCategory && (
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="subcategory-isActive"
+                            checked={subCategoryFormData.isActive}
+                            onCheckedChange={(checked) => setSubCategoryFormData({ ...subCategoryFormData, isActive: checked })}
+                          />
+                          <Label htmlFor="subcategory-isActive" className="text-sm">
+                            Active Subcategory
+                          </Label>
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsSubCategoryDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleAddSubCategory}>
+                        {editingSubCategory ? 'Update Subcategory' : 'Create Subcategory'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
-            {/* Categories Table View */}
-            {activeTab === "categories" && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Subcategories</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCategories.map((category) => {
-                    const categorySubCategories = getSubCategoriesForCategory(category._id);
-                    const isExpanded = expandedCategories.has(category._id);
-                    
-                    return (
-                      <Collapsible key={category._id} open={isExpanded} onOpenChange={() => toggleCategoryExpansion(category._id)}>
+            {/* Categories Tab */}
+            <TabsContent value="categories">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Subcategories</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCategories.map((category) => {
+                      const categorySubCategories = getSubCategoriesForCategory(category._id);
+                      const isExpanded = expandedCategories.has(category._id);
+                      
+                      return (
                         <>
-                          <TableRow className={!category.isActive ? "bg-muted/50" : ""}>
+                          <TableRow key={category._id} className={!category.isActive ? "bg-muted/50" : ""}>
                             <TableCell>
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm">
+                              {categorySubCategories.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleCategoryExpansion(category._id)}
+                                >
                                   {isExpanded ? (
                                     <ChevronDown className="w-4 h-4" />
                                   ) : (
                                     <ChevronRight className="w-4 h-4" />
                                   )}
                                 </Button>
-                              </CollapsibleTrigger>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge variant={category.isActive ? "default" : "secondary"}>
@@ -839,202 +832,185 @@ export default function Categories() {
                           </TableRow>
                           
                           {/* Subcategories for this category */}
-                          <CollapsibleContent asChild>
-                            <TableRow>
-                              <TableCell colSpan={8} className="p-0 bg-muted/20">
+                          {isExpanded && categorySubCategories.length > 0 && (
+                            <TableRow className="bg-muted/20">
+                              <TableCell colSpan={8} className="p-0">
                                 <div className="p-4 pl-12">
                                   <h4 className="text-sm font-medium mb-3">Subcategories</h4>
-                                  {categorySubCategories.length > 0 ? (
-                                    <div className="space-y-2">
-                                      {categorySubCategories.map((subCategory) => (
-                                        <div key={subCategory._id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                                          <div className="flex items-center gap-3">
-                                            <FolderTree className="w-4 h-4 text-muted-foreground" />
-                                            <div>
-                                              <div className="font-medium text-sm">{subCategory.name}</div>
-                                              <div className="text-xs text-muted-foreground">{subCategory.slug}</div>
-                                            </div>
-                                            <Badge variant={subCategory.isActive ? "default" : "secondary"} className="text-xs">
-                                              {subCategory.isActive ? "Active" : "Inactive"}
-                                            </Badge>
+                                  <div className="space-y-2">
+                                    {categorySubCategories.map((subCategory) => (
+                                      <div key={subCategory._id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                        <div className="flex items-center gap-3">
+                                          <FolderTree className="w-4 h-4 text-muted-foreground" />
+                                          <div>
+                                            <div className="font-medium text-sm">{subCategory.name}</div>
+                                            <div className="text-xs text-muted-foreground">{subCategory.slug}</div>
                                           </div>
-                                          <div className="flex gap-2">
-                                            <Button 
-                                              variant="outline" 
-                                              size="sm"
-                                              onClick={() => openEditSubCategoryDialog(subCategory)}
-                                            >
-                                              <Edit className="w-3 h-3" />
-                                            </Button>
-                                            <Button
-                                              variant={subCategory.isActive ? "secondary" : "default"}
-                                              size="sm"
-                                              onClick={() => handleDeleteSubCategory(subCategory)}
-                                              title={subCategory.isActive ? "Deactivate subcategory" : "Activate subcategory"}
-                                            >
-                                              {subCategory.isActive ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                            </Button>
-                                            <Button
-                                              variant="destructive"
-                                              size="sm"
-                                              onClick={() => handleHardDeleteSubCategory(subCategory._id)}
-                                              title="Permanently delete subcategory"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </Button>
-                                          </div>
+                                          <Badge variant={subCategory.isActive ? "default" : "secondary"} className="text-xs">
+                                            {subCategory.isActive ? "Active" : "Inactive"}
+                                          </Badge>
                                         </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="text-center py-4 text-muted-foreground">
-                                      <FolderTree className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                      <p className="text-sm">No subcategories found</p>
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="mt-2"
-                                        onClick={() => {
-                                          setSubCategoryFormData(prev => ({ ...prev, category: category._id }));
-                                          setIsSubCategoryDialogOpen(true);
-                                        }}
-                                      >
-                                        <Plus className="w-3 h-3 mr-1" />
-                                        Add Subcategory
-                                      </Button>
-                                    </div>
-                                  )}
+                                        <div className="flex gap-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => openEditSubCategoryDialog(subCategory)}
+                                          >
+                                            <Edit className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            variant={subCategory.isActive ? "secondary" : "default"}
+                                            size="sm"
+                                            onClick={() => handleDeleteSubCategory(subCategory)}
+                                            title={subCategory.isActive ? "Deactivate subcategory" : "Activate subcategory"}
+                                          >
+                                            {subCategory.isActive ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                          </Button>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => handleHardDeleteSubCategory(subCategory._id)}
+                                            title="Permanently delete subcategory"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               </TableCell>
                             </TableRow>
-                          </CollapsibleContent>
+                          )}
                         </>
-                      </Collapsible>
-                    );
-                  })}
-                  
-                  {filteredCategories.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
-                        <div className="text-center">
-                          <FolderOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-muted-foreground">No categories found</p>
-                          {searchTerm && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Try adjusting your search terms
-                            </p>
-                          )}
-                          {!searchTerm && (
-                            <Button onClick={openCreateCategoryDialog} className="mt-4">
-                              <Plus className="w-4 h-4 mr-2" />
-                              Create Your First Category
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
+                      );
+                    })}
+                    
+                    {filteredCategories.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <div className="text-center">
+                            <FolderOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-muted-foreground">No categories found</p>
+                            {searchTerm && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Try adjusting your search terms
+                              </p>
+                            )}
+                            {!searchTerm && (
+                              <Button onClick={openCreateCategoryDialog} className="mt-4">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Your First Category
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
 
-            {/* Subcategories Table View */}
-            {activeTab === "subcategories" && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Parent Category</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSubCategories.map((subCategory) => (
-                    <TableRow key={subCategory._id} className={!subCategory.isActive ? "bg-muted/50" : ""}>
-                      <TableCell>
-                        <Badge variant={subCategory.isActive ? "default" : "secondary"}>
-                          {subCategory.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FolderTree className="w-4 h-4" />
-                          {subCategory.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-sm">
-                        {subCategory.slug}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                        {subCategory.description || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {subCategory.category.name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {new Date(subCategory.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => openEditSubCategoryDialog(subCategory)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant={subCategory.isActive ? "secondary" : "default"}
-                            size="sm"
-                            onClick={() => handleDeleteSubCategory(subCategory)}
-                            title={subCategory.isActive ? "Deactivate subcategory" : "Activate subcategory"}
-                          >
-                            {subCategory.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleHardDeleteSubCategory(subCategory._id)}
-                            title="Permanently delete subcategory"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  
-                  {filteredSubCategories.length === 0 && (
+            {/* Subcategories Tab */}
+            <TabsContent value="subcategories">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <div className="text-center">
-                          <FolderTree className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-muted-foreground">No subcategories found</p>
-                          {searchTerm && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Try adjusting your search terms
-                            </p>
-                          )}
-                          {!searchTerm && (
-                            <Button onClick={openCreateSubCategoryDialog} className="mt-4">
-                              <Plus className="w-4 h-4 mr-2" />
-                              Create Your First Subcategory
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Parent Category</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSubCategories.map((subCategory) => (
+                      <TableRow key={subCategory._id} className={!subCategory.isActive ? "bg-muted/50" : ""}>
+                        <TableCell>
+                          <Badge variant={subCategory.isActive ? "default" : "secondary"}>
+                            {subCategory.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <FolderTree className="w-4 h-4" />
+                            {subCategory.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground font-mono text-sm">
+                          {subCategory.slug}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                          {subCategory.description || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {subCategory.category.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(subCategory.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openEditSubCategoryDialog(subCategory)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant={subCategory.isActive ? "secondary" : "default"}
+                              size="sm"
+                              onClick={() => handleDeleteSubCategory(subCategory)}
+                              title={subCategory.isActive ? "Deactivate subcategory" : "Activate subcategory"}
+                            >
+                              {subCategory.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleHardDeleteSubCategory(subCategory._id)}
+                              title="Permanently delete subcategory"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    
+                    {filteredSubCategories.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="text-center">
+                            <FolderTree className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-muted-foreground">No subcategories found</p>
+                            {searchTerm && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Try adjusting your search terms
+                              </p>
+                            )}
+                            {!searchTerm && (
+                              <Button onClick={openCreateSubCategoryDialog} className="mt-4">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Your First Subcategory
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
