@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,8 +52,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 // Updated interfaces to match populated backend responses
 interface PopulatedCategory {
@@ -94,22 +101,28 @@ interface PopulatedAuthor {
 interface Article {
   _id: string;
   title: string;
-  authors: PopulatedAuthor[]; // Now populated objects
-  category: PopulatedCategory; // Now populated object
-  subcategory?: PopulatedSubCategory; // Now populated object
+  content: string;
+  authors: PopulatedAuthor[];
+  category: PopulatedCategory;
+  subcategory?: PopulatedSubCategory;
   status: "published" | "draft";
   publishedAt?: string;
   views: number;
   excerpt: string;
-  tags: PopulatedTag[]; // Now populated objects
+  tags: PopulatedTag[];
   featuredMedia: {
     id: string;
     url: string;
     alt?: string;
   };
+  isFeatured: boolean;
+  isSticky: boolean;
+  allowComments: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+const API_BASE_URL = 'http://localhost:5050/api';
 
 export default function ArticleList() {
   const navigate = useNavigate();
@@ -124,6 +137,28 @@ export default function ArticleList() {
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [editedArticle, setEditedArticle] = useState<Partial<Article> | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // State for full edit modal
+  const [categories, setCategories] = useState<PopulatedCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<PopulatedSubCategory[]>([]);
+  const [tags, setTags] = useState<PopulatedTag[]>([]);
+  const [authors, setAuthors] = useState<PopulatedAuthor[]>([]);
+  const [isEditLoading, setIsEditLoading] = useState(false);
+
+  // Edit form state
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editExcerpt, setEditExcerpt] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editSubcategory, setEditSubcategory] = useState("");
+  const [editSelectedTags, setEditSelectedTags] = useState<string[]>([]);
+  const [editSelectedAuthors, setEditSelectedAuthors] = useState<PopulatedAuthor[]>([]);
+  const [editFeaturedMediaId, setEditFeaturedMediaId] = useState("");
+  const [editIsPublished, setEditIsPublished] = useState(false);
+  const [editIsFeatured, setEditIsFeatured] = useState(false);
+  const [editIsSticky, setEditIsSticky] = useState(false);
+  const [editAuthorSearch, setEditAuthorSearch] = useState("");
+  const [showAuthorResults, setShowAuthorResults] = useState(false);
 
   // Fetch articles from backend
   const fetchArticles = async () => {
@@ -145,12 +180,49 @@ export default function ArticleList() {
     }
   };
 
+  // Fetch data for edit form
+  const fetchEditData = async () => {
+    try {
+      setIsEditLoading(true);
+      
+      const [categoriesResponse, subcategoriesResponse, tagsResponse, authorsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/categories?isActive=true`),
+        fetch(`${API_BASE_URL}/sub-categories?isActive=true`),
+        fetch(`${API_BASE_URL}/tags?isActive=true`),
+        fetch(`${API_BASE_URL}/users`)
+      ]);
+
+      const [categoriesData, subcategoriesData, tagsData, authorsData] = await Promise.all([
+        categoriesResponse.json(),
+        subcategoriesResponse.json(),
+        tagsResponse.json(),
+        authorsResponse.json()
+      ]);
+
+      if (categoriesData.success) setCategories(categoriesData.data);
+      if (subcategoriesData.success) setSubcategories(subcategoriesData.data);
+      if (tagsData.success) setTags(tagsData.data);
+      if (authorsData.success) {
+        const activeAuthors = authorsData.data.filter((user: PopulatedAuthor) => 
+          user.status === 'active' && 
+          ['writer', 'editor', 'admin', 'superadmin'].includes(user.role)
+        );
+        setAuthors(activeAuthors);
+      }
+    } catch (error) {
+      console.error('Error fetching edit data:', error);
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchArticles();
+    fetchEditData();
   }, []);
 
   // Get unique categories for filter
-  const categories = Array.from(
+  const availableCategories = Array.from(
     new Set(articles.map(article => article.category?._id))
   ).map(id => articles.find(article => article.category?._id === id)?.category)
    .filter((cat): cat is PopulatedCategory => cat !== undefined);
@@ -178,24 +250,52 @@ export default function ArticleList() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  // Handle editing an article
-  const handleEdit = (article: Article) => {
+  // Handle editing an article - full modal
+  const handleEdit = async (article: Article) => {
     setCurrentArticle(article);
-    setEditedArticle({ ...article });
+    
+    // Populate edit form with article data
+    setEditTitle(article.title);
+    setEditContent(article.content);
+    setEditExcerpt(article.excerpt);
+    setEditCategory(article.category._id);
+    setEditSubcategory(article.subcategory?._id || "");
+    setEditSelectedTags(article.tags.map(tag => tag._id));
+    setEditSelectedAuthors(article.authors);
+    setEditFeaturedMediaId(article.featuredMedia.id);
+    setEditIsPublished(article.status === 'published');
+    setEditIsFeatured(article.isFeatured);
+    setEditIsSticky(article.isSticky);
+    
     setEditDialogOpen(true);
   };
 
   // Handle saving edited article
   const handleSaveEdit = async () => {
-    if (!currentArticle || !editedArticle) return;
+    if (!currentArticle) return;
 
     try {
+      const articleData = {
+        title: editTitle,
+        content: editContent,
+        excerpt: editExcerpt,
+        category: editCategory,
+        subcategory: editSubcategory || undefined,
+        tags: editSelectedTags,
+        authors: editSelectedAuthors.map(author => author._id),
+        featuredImage: editFeaturedMediaId,
+        status: editIsPublished ? 'published' : 'draft',
+        isFeatured: editIsFeatured,
+        isSticky: editIsSticky,
+        allowComments: true,
+      };
+
       const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editedArticle),
+        body: JSON.stringify(articleData),
       });
 
       const result = await response.json();
@@ -204,8 +304,7 @@ export default function ArticleList() {
         setMessage({ type: 'success', text: 'Article updated successfully!' });
         fetchArticles(); // Refresh the list
         setEditDialogOpen(false);
-        setCurrentArticle(null);
-        setEditedArticle(null);
+        resetEditForm();
       } else {
         setMessage({ type: 'error', text: result.message || 'Failed to update article' });
       }
@@ -213,6 +312,24 @@ export default function ArticleList() {
       console.error('Error updating article:', error);
       setMessage({ type: 'error', text: 'Network error. Please try again.' });
     }
+  };
+
+  // Reset edit form
+  const resetEditForm = () => {
+    setEditTitle("");
+    setEditContent("");
+    setEditExcerpt("");
+    setEditCategory("");
+    setEditSubcategory("");
+    setEditSelectedTags([]);
+    setEditSelectedAuthors([]);
+    setEditFeaturedMediaId("");
+    setEditIsPublished(false);
+    setEditIsFeatured(false);
+    setEditIsSticky(false);
+    setEditAuthorSearch("");
+    setShowAuthorResults(false);
+    setCurrentArticle(null);
   };
 
   // Handle deleting an article
@@ -252,7 +369,7 @@ export default function ArticleList() {
     setViewDialogOpen(true);
   };
 
-  // Handle creating new article - using TanStack Router navigation
+  // Handle creating new article
   const handleNewArticle = () => {
     navigate({ to: '/articles' });
   };
@@ -274,6 +391,85 @@ export default function ArticleList() {
       day: 'numeric'
     });
   };
+
+  // Author search and selection functions for edit modal
+  const filteredAuthors = useMemo(() => {
+    if (!editAuthorSearch.trim()) return [];
+    
+    const searchTerm = editAuthorSearch.toLowerCase();
+    return authors.filter(author => 
+      author.firstName.toLowerCase().includes(searchTerm) ||
+      author.lastName.toLowerCase().includes(searchTerm) ||
+      author.username.toLowerCase().includes(searchTerm) ||
+      author.email.toLowerCase().includes(searchTerm)
+    );
+  }, [editAuthorSearch, authors]);
+
+  const handleAuthorSearch = (searchTerm: string) => {
+    setEditAuthorSearch(searchTerm);
+    setShowAuthorResults(searchTerm.length > 0);
+  };
+
+  const handleAuthorSelect = (author: PopulatedAuthor) => {
+    if (!editSelectedAuthors.find(a => a._id === author._id)) {
+      setEditSelectedAuthors(prev => [...prev, author]);
+    }
+    setEditAuthorSearch("");
+    setShowAuthorResults(false);
+  };
+
+  const handleAuthorRemove = (authorId: string) => {
+    setEditSelectedAuthors(prev => prev.filter(a => a._id !== authorId));
+  };
+
+  // Tag selection functions for edit modal
+  const handleTagSelect = (tagId: string) => {
+    setEditSelectedTags((prev) =>
+      prev.includes(tagId) ? prev : [...prev, tagId]
+    );
+  };
+
+  const handleTagRemove = (tagId: string) => {
+    setEditSelectedTags((prev) => prev.filter(id => id !== tagId));
+  };
+
+  // Get available subcategories for selected category
+  const availableSubcategories = useMemo(() => {
+    if (!editCategory) return [];
+    
+    return subcategories
+      .filter(sub => sub.category._id === editCategory && sub.isActive)
+      .map(sub => ({
+        id: sub._id,
+        name: sub.name,
+        slug: sub.slug
+      }));
+  }, [editCategory, subcategories]);
+
+  const isSubcategoryRequired = availableSubcategories.length > 0;
+  const subcategoryPlaceholder = useMemo(() => {
+    if (!editCategory) {
+      return "Select a category first";
+    }
+    if (!isSubcategoryRequired) {
+      return "No sub-categories available";
+    }
+    return "Select sub-category";
+  }, [editCategory, isSubcategoryRequired]);
+
+  // Transform data for frontend use
+  const availableTags = useMemo(() => 
+    tags.map(tag => ({
+      id: tag._id,
+      name: tag.name
+    })), [tags]);
+
+  const categoriesData = useMemo(() => 
+    categories.map(cat => ({
+      id: cat._id,
+      name: cat.name,
+      slug: cat.slug
+    })), [categories]);
 
   // Clear message after 5 seconds
   useEffect(() => {
@@ -346,7 +542,7 @@ export default function ArticleList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
+                {availableCategories.map(category => (
                   <SelectItem key={category._id} value={category._id}>
                     {category.name}
                   </SelectItem>
@@ -467,80 +663,273 @@ export default function ArticleList() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
+      {/* Full Screen Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Article</DialogTitle>
+          <DialogContent className="max-w-none w-[98vw] h-[95vh] flex flex-col">
+              <DialogHeader>
+            <DialogTitle className="text-2xl">Edit Article: {currentArticle?.title}</DialogTitle>
             <DialogDescription>
-              Make changes to your article here. Click save when you're done.
+              Make changes to your article. All fields are editable.
             </DialogDescription>
           </DialogHeader>
-          {editedArticle && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={editedArticle.title || ""}
-                  onChange={(e) => setEditedArticle({ ...editedArticle, title: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="authors">Authors</Label>
-                <div className="flex flex-wrap gap-1">
-                  {Array.isArray(editedArticle.authors) && editedArticle.authors.map((author) => (
-                    <Badge key={author._id} variant="secondary">
-                      {getAuthorName(author)}
-                    </Badge>
-                  ))}
+          
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Enter article title"
+                className="text-lg font-semibold"
+              />
+            </div>
+
+            {/* Content */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Content</Label>
+              <Textarea
+                id="edit-content"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Enter article content"
+                rows={12}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Featured Media & Excerpt */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-featured-media">Featured Media ID</Label>
+                  <Input
+                    id="edit-featured-media"
+                    value={editFeaturedMediaId}
+                    onChange={(e) => setEditFeaturedMediaId(e.target.value)}
+                    placeholder="Enter featured media ID"
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Author editing is not available in this view. Use the full article editor.
-                </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-excerpt">Excerpt</Label>
+                  <Textarea
+                    id="edit-excerpt"
+                    value={editExcerpt}
+                    onChange={(e) => setEditExcerpt(e.target.value)}
+                    placeholder="Enter excerpt"
+                    rows={3}
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={typeof editedArticle.category === 'object' ? editedArticle.category.name : ""}
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground">
-                  Category editing is not available in this view. Use the full article editor.
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={editedArticle.status || "draft"}
-                  onValueChange={(value) => setEditedArticle({ ...editedArticle, status: value as "published" | "draft" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="excerpt">Excerpt</Label>
-                <Textarea
-                  id="excerpt"
-                  value={editedArticle.excerpt || ""}
-                  onChange={(e) => setEditedArticle({ ...editedArticle, excerpt: e.target.value })}
-                  rows={3}
-                />
+
+              {/* Authors */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Authors</Label>
+                  <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-10">
+                    {editSelectedAuthors.map((author) => (
+                      <Badge
+                        key={author._id}
+                        variant="secondary"
+                        className="px-3 py-1 text-sm flex items-center gap-1"
+                      >
+                        {getAuthorName(author)} ({author.role})
+                        <button
+                          type="button"
+                          onClick={() => handleAuthorRemove(author._id)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {editSelectedAuthors.length === 0 && (
+                      <span className="text-muted-foreground text-sm">No authors selected</span>
+                    )}
+                  </div>
+
+                  {/* Author Search */}
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={editAuthorSearch}
+                        onChange={(e) => handleAuthorSearch(e.target.value)}
+                        placeholder="Search for authors..."
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    {/* Search Results */}
+                    {showAuthorResults && (
+                      <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
+                        {filteredAuthors.length > 0 ? (
+                          filteredAuthors.map((author) => (
+                            <div
+                              key={author._id}
+                              className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                              onClick={() => handleAuthorSelect(author)}
+                            >
+                              <div className="font-medium">
+                                {getAuthorName(author)}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {author.username} • {author.email} • {author.role}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-muted-foreground text-center">
+                            No authors found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category & Subcategory */}
+                <div className="space-y-2 flex flex-row gap-4">
+                  <div className="space-y-2 flex-1">
+                    <Label htmlFor="edit-category">Category</Label>
+                    <Select value={editCategory} onValueChange={setEditCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriesData.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 flex-1">
+                    <Label htmlFor="edit-subcategory">
+                      Sub-category
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/50 text-[10px] text-muted-foreground cursor-help">
+                            ?
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className='max-w-64 flex-wrap'>
+                          {availableSubcategories.length > 0 
+                            ? "Select a sub-category to further classify this article"
+                            : "No sub-categories available for the selected category"
+                          }
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Select
+                      value={editSubcategory}
+                      onValueChange={setEditSubcategory}
+                      disabled={!isSubcategoryRequired}
+                    >
+                      <SelectTrigger className={!isSubcategoryRequired ? "text-muted-foreground" : ""}>
+                        <SelectValue placeholder={subcategoryPlaceholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSubcategories.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-10">
+                    {editSelectedTags.map((tagId) => {
+                      const tag = availableTags.find(t => t.id === tagId);
+                      return (
+                        <Badge
+                          key={tagId}
+                          variant="secondary"
+                          className="px-3 py-1 text-sm cursor-pointer"
+                          onClick={() => handleTagRemove(tagId)}
+                        >
+                          {tag?.name} ×
+                        </Badge>
+                      );
+                    })}
+                    {editSelectedTags.length === 0 && (
+                      <span className="text-muted-foreground text-sm">No tags selected</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags
+                      .filter((tag) => !editSelectedTags.includes(tag.id))
+                      .map((tag) => (
+                        <Badge
+                          key={tag.id}
+                          variant="outline"
+                          className="cursor-pointer px-3 py-1 text-sm"
+                          onClick={() => handleTagSelect(tag.id)}
+                        >
+                          {tag.name}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Status Controls */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-publish"
+                      checked={editIsPublished}
+                      onCheckedChange={setEditIsPublished}
+                    />
+                    <Label htmlFor="edit-publish">Published</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-featured"
+                      checked={editIsFeatured}
+                      onCheckedChange={setEditIsFeatured}
+                      disabled={!editIsPublished}
+                    />
+                    <Label htmlFor="edit-featured" className={!editIsPublished ? "text-muted-foreground" : ""}>
+                      Featured article
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="edit-sticky"
+                      checked={editIsSticky}
+                      onCheckedChange={setEditIsSticky}
+                      disabled={!editIsPublished}
+                    />
+                    <Label htmlFor="edit-sticky" className={!editIsPublished ? "text-muted-foreground" : ""}>
+                      Sticky article (pinned to top)
+                    </Label>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setEditDialogOpen(false);
+              resetEditForm();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>Save changes</Button>
+            <Button onClick={handleSaveEdit} disabled={isEditLoading}>
+              {isEditLoading ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -628,6 +1017,14 @@ export default function ArticleList() {
               <div>
                 <Label className="text-muted-foreground">Excerpt</Label>
                 <p className="mt-1 text-sm">{currentArticle.excerpt}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Featured</Label>
+                <p>{currentArticle.isFeatured ? 'Yes' : 'No'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Sticky</Label>
+                <p>{currentArticle.isSticky ? 'Yes' : 'No'}</p>
               </div>
             </div>
           )}
