@@ -55,17 +55,53 @@ import {
 import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 
+// Updated interfaces to match populated backend responses
+interface PopulatedCategory {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+}
+
+interface PopulatedSubCategory {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+}
+
+interface PopulatedTag {
+  _id: string;
+  name: string;
+  slug: string;
+  color?: string;
+  description?: string;
+  isActive: boolean;
+}
+
+interface PopulatedAuthor {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
 interface Article {
   _id: string;
   title: string;
-  authors: string[];
-  category: string;
-  subcategory?: string;
+  authors: PopulatedAuthor[]; // Now populated objects
+  category: PopulatedCategory; // Now populated object
+  subcategory?: PopulatedSubCategory; // Now populated object
   status: "published" | "draft";
   publishedAt?: string;
   views: number;
   excerpt: string;
-  tags: string[];
+  tags: PopulatedTag[]; // Now populated objects
   featuredMedia: {
     id: string;
     url: string;
@@ -114,16 +150,30 @@ export default function ArticleList() {
   }, []);
 
   // Get unique categories for filter
-  const categories = Array.from(new Set(articles.map(article => article.category)));
+  const categories = Array.from(
+    new Set(articles.map(article => article.category?._id))
+  ).map(id => articles.find(article => article.category?._id === id)?.category)
+   .filter((cat): cat is PopulatedCategory => cat !== undefined);
+
+  // Helper function to get author display name
+  const getAuthorName = (author: PopulatedAuthor) => {
+    return `${author.firstName} ${author.lastName}`;
+  };
 
   // Filter articles based on search and filters
   const filteredArticles = articles.filter(article => {
-    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.authors.some(author => author.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = 
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      article.authors.some(author => 
+        getAuthorName(author).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        author.username.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    
     const matchesStatus = statusFilter === "all" || 
                          (statusFilter === "published" && article.status === "published") ||
                          (statusFilter === "draft" && article.status === "draft");
-    const matchesCategory = categoryFilter === "all" || article.category === categoryFilter;
+    
+    const matchesCategory = categoryFilter === "all" || article.category?._id === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
@@ -297,7 +347,9 @@ export default function ArticleList() {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                  <SelectItem key={category._id} value={category._id}>
+                    {category.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -332,27 +384,28 @@ export default function ArticleList() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {Array.isArray(article.authors) && article.authors.length > 0 ? (
-                            <>
-                              {article.authors.slice(0, 2).map((author, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {author}
-                                </Badge>
-                              ))}
-                              {article.authors.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{article.authors.length - 2} more
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">
-                              Unknown
-                            </Badge>
-                          )}
-
+                              <>
+                                {article.authors.slice(0, 2).map((author) => (
+                                  <Badge key={author._id} variant="outline" className="text-xs">
+                                    {getAuthorName(author)}
+                                  </Badge>
+                                ))}
+                                {article.authors.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{article.authors.length - 2} more
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                Unknown
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
-                        <TableCell>{article.category}</TableCell>
+                        <TableCell>
+                          {article.category?.name || 'Unknown'}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={getStatusVariant(article.status)}>
                             {article.status}
@@ -434,24 +487,28 @@ export default function ArticleList() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="authors">Authors (comma separated)</Label>
-                <Input
-                  id="authors"
-                  value={editedArticle.authors?.join(", ") || ""}
-                  onChange={(e) => setEditedArticle({ 
-                    ...editedArticle, 
-                    authors: e.target.value.split(',').map(author => author.trim()).filter(Boolean)
-                  })}
-                  placeholder="John Doe, Jane Smith"
-                />
+                <Label htmlFor="authors">Authors</Label>
+                <div className="flex flex-wrap gap-1">
+                  {Array.isArray(editedArticle.authors) && editedArticle.authors.map((author) => (
+                    <Badge key={author._id} variant="secondary">
+                      {getAuthorName(author)}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Author editing is not available in this view. Use the full article editor.
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
                 <Input
                   id="category"
-                  value={editedArticle.category || ""}
-                  onChange={(e) => setEditedArticle({ ...editedArticle, category: e.target.value })}
+                  value={typeof editedArticle.category === 'object' ? editedArticle.category.name : ""}
+                  disabled
                 />
+                <p className="text-xs text-muted-foreground">
+                  Category editing is not available in this view. Use the full article editor.
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
@@ -522,22 +579,22 @@ export default function ArticleList() {
                 <div>
                   <Label className="text-muted-foreground">Authors</Label>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {currentArticle.authors.map((author, index) => (
-                      <Badge key={index} variant="secondary">
-                        {author}
+                    {currentArticle.authors.map((author) => (
+                      <Badge key={author._id} variant="secondary">
+                        {getAuthorName(author)}
                       </Badge>
                     ))}
                   </div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Category</Label>
-                  <p>{currentArticle.category}</p>
+                  <p>{currentArticle.category?.name || 'Unknown'}</p>
                 </div>
               </div>
               {currentArticle.subcategory && (
                 <div>
                   <Label className="text-muted-foreground">Subcategory</Label>
-                  <p>{currentArticle.subcategory}</p>
+                  <p>{currentArticle.subcategory.name}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -560,9 +617,9 @@ export default function ArticleList() {
                 <div>
                   <Label className="text-muted-foreground">Tags</Label>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {currentArticle.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline">
-                        {tag}
+                    {currentArticle.tags.map((tag) => (
+                      <Badge key={tag._id} variant="outline">
+                        {tag.name}
                       </Badge>
                     ))}
                   </div>

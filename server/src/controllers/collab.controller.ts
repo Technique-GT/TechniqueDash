@@ -40,7 +40,7 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
     const collaborator: ICollaborator = new Collaborator({
       name,
       email: email.toLowerCase(),
-      role: role || 'Writer',
+      role: role || 'Author',
       status: 'pending',
       joinDate: new Date(),
       userId: new mongoose.Types.ObjectId(userId)

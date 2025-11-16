@@ -7,7 +7,12 @@ import {
   updateArticle,
   deleteArticle,
   getPublishedArticles,
-  getArticlesByCategory
+  getFeaturedArticles,
+  getStickyArticles,
+  getArticlesByCategory,
+  toggleFeatured,
+  toggleSticky,
+  updateArticleStatus
 } from '../controllers/article.controller';
 
 const router = Router();
@@ -21,6 +26,12 @@ router.get('/', getArticles);
 // Get published articles (public view)
 router.get('/published', getPublishedArticles);
 
+// Get featured articles
+router.get('/featured', getFeaturedArticles);
+
+// Get sticky articles
+router.get('/sticky', getStickyArticles);
+
 // Get articles by category
 router.get('/category/:category', getArticlesByCategory);
 
@@ -33,7 +44,14 @@ router.get('/slug/:slug', getArticleBySlug);
 // Update article
 router.put('/:id', updateArticle);
 
+// Toggle featured status
+router.patch('/:id/featured', toggleFeatured);
+
+// Toggle sticky status
+router.patch('/:id/sticky', toggleSticky);
+
 // Delete article
 router.delete('/:id', deleteArticle);
 
+router.patch('/:id/status', updateArticleStatus);
 export default router;

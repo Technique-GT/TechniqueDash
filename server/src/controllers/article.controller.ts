@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Article, { IArticle } from '../models/Article';
+import mongoose from 'mongoose';
 
 interface CreateArticleRequest extends Request {
   body: {
@@ -13,6 +14,8 @@ interface CreateArticleRequest extends Request {
     featuredMediaId: string;
     featuredMediaUrl: string;
     isPublished: boolean;
+    isFeatured: boolean;
+    isSticky: boolean;
     seoTitle?: string;
     seoDescription?: string;
   }
@@ -36,6 +39,15 @@ const generateSlug = (title: string): string => {
   );
 };
 
+// Helper function to populate article references
+const populateArticle = (query: any) => {
+  return query
+    .populate('category', 'name slug description isActive')
+    .populate('subcategory', 'name slug description isActive')
+    .populate('tags', 'name slug color description isActive')
+    .populate('authors', 'firstName lastName username email role status');
+};
+
 export const createArticle = async (req: CreateArticleRequest, res: Response): Promise<void> => {
   try {
     const {
@@ -49,6 +61,8 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
       featuredMediaId,
       featuredMediaUrl,
       isPublished,
+      isFeatured,
+      isSticky,
       seoTitle,
       seoDescription
     } = req.body;
@@ -65,26 +79,37 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
 
     const slug = generateSlug(title);
 
+    // Validate that only published articles can be featured or sticky
+    const validatedIsFeatured = isPublished ? isFeatured : false;
+    const validatedIsSticky = isPublished ? isSticky : false;
 
-    // Build article data with explicit undefined handling
+    // Convert string IDs to ObjectIds for references
+    const categoryObjectId = new mongoose.Types.ObjectId(category);
+    const subcategoryObjectId = subcategory ? new mongoose.Types.ObjectId(subcategory) : undefined;
+    const tagObjectIds = tags.map(id => new mongoose.Types.ObjectId(id));
+    const authorObjectIds = authors.map(id => new mongoose.Types.ObjectId(id));
+
+    // Build article data
     const articleData: Partial<IArticle> = {
       title,
       content,
       excerpt,
-      category,
-      tags,
-      authors,
+      category: categoryObjectId as any,
+      tags: tagObjectIds as any,
+      authors: authorObjectIds as any,
       featuredMedia: {
         id: featuredMediaId,
         url: featuredMediaUrl
       },
       isPublished,
+      isFeatured: validatedIsFeatured,
+      isSticky: validatedIsSticky,
       slug
     };
 
-    // Add optional fields only if they have values
-    if (subcategory) {
-      articleData.subcategory = subcategory;
+    // Add optional fields
+    if (subcategoryObjectId) {
+      articleData.subcategory = subcategoryObjectId as any;
     }
 
     if (seoTitle) {
@@ -95,13 +120,21 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
       articleData.seoDescription = seoDescription;
     }
 
+    // Set publishedAt if publishing
+    if (isPublished && !articleData.publishedAt) {
+      articleData.publishedAt = new Date();
+    }
+
     const article = new Article(articleData);
     await article.save();
+
+    // Populate the created article before returning
+    const populatedArticle = await populateArticle(Article.findById(article._id));
 
     res.status(201).json({
       success: true,
       message: 'Article created successfully',
-      data: article
+      data: populatedArticle
     });
   } catch (error: any) {
     console.error('Create article error:', error);
@@ -115,9 +148,11 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
 
 export const getArticles = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const articles = await Article.find()
-      .sort({ createdAt: -1 })
-      .select('-content'); // Exclude content for list view
+    const articles = await populateArticle(
+      Article.find()
+        .sort({ createdAt: -1 })
+        .select('-content')
+    );
 
     res.json({
       success: true,
@@ -137,7 +172,8 @@ export const getArticleById = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
     
-    const article = await Article.findById(id);
+    const article = await populateArticle(Article.findById(id));
+    
     if (!article) {
       res.status(404).json({
         success: false,
@@ -164,7 +200,8 @@ export const getArticleBySlug = async (req: Request, res: Response): Promise<voi
   try {
     const { slug } = req.params;
     
-    const article = await Article.findOne({ slug });
+    const article = await populateArticle(Article.findOne({ slug }));
+    
     if (!article) {
       res.status(404).json({
         success: false,
@@ -205,28 +242,42 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
       featuredMediaId,
       featuredMediaUrl,
       isPublished,
+      isFeatured,
+      isSticky,
       seoTitle,
       seoDescription
     } = req.body;
 
-    // Build update object with explicit undefined handling
+    // Validate that only published articles can be featured or sticky
+    const validatedIsFeatured = isPublished ? isFeatured : false;
+    const validatedIsSticky = isPublished ? isSticky : false;
+
+    // Convert string IDs to ObjectIds
+    const categoryObjectId = new mongoose.Types.ObjectId(category);
+    const subcategoryObjectId = subcategory ? new mongoose.Types.ObjectId(subcategory) : undefined;
+    const tagObjectIds = tags.map(id => new mongoose.Types.ObjectId(id));
+    const authorObjectIds = authors.map(id => new mongoose.Types.ObjectId(id));
+
+    // Build update object
     const updateData: Partial<IArticle> = {
       title,
       content,
       excerpt,
-      category,
-      tags,
-      authors,
+      category: categoryObjectId as any,
+      tags: tagObjectIds as any,
+      authors: authorObjectIds as any,
       featuredMedia: {
         id: featuredMediaId,
         url: featuredMediaUrl
       },
-      isPublished
+      isPublished,
+      isFeatured: validatedIsFeatured,
+      isSticky: validatedIsSticky
     };
 
-    // Add optional fields only if they are provided
-    if (subcategory !== undefined) {
-      updateData.subcategory = subcategory;
+    // Add optional fields
+    if (subcategoryObjectId !== undefined) {
+      updateData.subcategory = subcategoryObjectId as any;
     }
 
     if (seoTitle !== undefined) {
@@ -235,6 +286,14 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
 
     if (seoDescription !== undefined) {
       updateData.seoDescription = seoDescription;
+    }
+
+    // Set publishedAt if publishing for the first time
+    if (isPublished && !updateData.publishedAt) {
+      const existingArticle = await Article.findById(id);
+      if (existingArticle && !existingArticle.publishedAt) {
+        updateData.publishedAt = new Date();
+      }
     }
 
     const article = await Article.findByIdAndUpdate(
@@ -251,10 +310,13 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
       return;
     }
 
+    // Populate the updated article
+    const populatedArticle = await populateArticle(Article.findById(article._id));
+
     res.json({
       success: true,
       message: 'Article updated successfully',
-      data: article
+      data: populatedArticle
     });
   } catch (error: any) {
     console.error('Update article error:', error);
@@ -295,9 +357,11 @@ export const deleteArticle = async (req: Request, res: Response): Promise<void> 
 
 export const getPublishedArticles = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const articles = await Article.find({ isPublished: true })
-      .sort({ publishedAt: -1 })
-      .select('-content');
+    const articles = await populateArticle(
+      Article.find({ isPublished: true })
+        .sort({ isSticky: -1, publishedAt: -1 })
+        .select('-content')
+    );
 
     res.json({
       success: true,
@@ -313,16 +377,69 @@ export const getPublishedArticles = async (_req: Request, res: Response): Promis
   }
 };
 
+export const getFeaturedArticles = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const articles = await populateArticle(
+      Article.find({ 
+        isPublished: true,
+        isFeatured: true 
+      })
+      .sort({ publishedAt: -1 })
+      .select('-content')
+      .limit(10)
+    );
+
+    res.json({
+      success: true,
+      data: articles
+    });
+  } catch (error: any) {
+    console.error('Get featured articles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured articles',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const getStickyArticles = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const articles = await populateArticle(
+      Article.find({ 
+        isPublished: true,
+        isSticky: true 
+      })
+      .sort({ publishedAt: -1 })
+      .select('-content')
+    );
+
+    res.json({
+      success: true,
+      data: articles
+    });
+  } catch (error: any) {
+    console.error('Get sticky articles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch sticky articles',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export const getArticlesByCategory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { category } = req.params;
     
-    const articles = await Article.find({ 
-      category,
-      isPublished: true 
-    })
-    .sort({ publishedAt: -1 })
-    .select('-content');
+    const articles = await populateArticle(
+      Article.find({ 
+        category,
+        isPublished: true 
+      })
+      .sort({ isSticky: -1, publishedAt: -1 })
+      .select('-content')
+    );
 
     res.json({
       success: true,
@@ -333,6 +450,160 @@ export const getArticlesByCategory = async (req: Request, res: Response): Promis
     res.status(500).json({
       success: false,
       message: 'Failed to fetch articles by category',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const toggleFeatured = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const article = await Article.findById(id);
+    if (!article) {
+      res.status(404).json({
+        success: false,
+        message: 'Article not found'
+      });
+      return;
+    }
+
+    if (!article.isPublished) {
+      res.status(400).json({
+        success: false,
+        message: 'Only published articles can be featured'
+      });
+      return;
+    }
+
+    article.isFeatured = !article.isFeatured;
+    await article.save();
+
+    // Populate before returning
+    const populatedArticle = await populateArticle(Article.findById(article._id));
+
+    res.json({
+      success: true,
+      message: `Article ${article.isFeatured ? 'featured' : 'unfeatured'} successfully`,
+      data: populatedArticle
+    });
+  } catch (error: any) {
+    console.error('Toggle featured error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle featured status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const toggleSticky = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const article = await Article.findById(id);
+    if (!article) {
+      res.status(404).json({
+        success: false,
+        message: 'Article not found'
+      });
+      return;
+    }
+
+    if (!article.isPublished) {
+      res.status(400).json({
+        success: false,
+        message: 'Only published articles can be sticky'
+      });
+      return;
+    }
+
+    article.isSticky = !article.isSticky;
+    await article.save();
+
+    // Populate before returning
+    const populatedArticle = await populateArticle(Article.findById(article._id));
+
+    res.json({
+      success: true,
+      message: `Article ${article.isSticky ? 'pinned' : 'unpinned'} successfully`,
+      data: populatedArticle
+    });
+  } catch (error: any) {
+    console.error('Toggle sticky error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle sticky status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const updateArticleStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status, isFeatured, isSticky } = req.body;
+
+    const article = await Article.findById(id);
+    if (!article) {
+      res.status(404).json({
+        success: false,
+        message: 'Article not found'
+      });
+      return;
+    }
+
+    const updateData: Partial<IArticle> = {};
+
+    if (status !== undefined) {
+      updateData.isPublished = status === 'published';
+      
+      if (status === 'published' && !article.publishedAt) {
+        updateData.publishedAt = new Date();
+      }
+    }
+
+    if (isFeatured !== undefined) {
+      if (isFeatured && !updateData.isPublished && !article.isPublished) {
+        res.status(400).json({
+          success: false,
+          message: 'Only published articles can be featured'
+        });
+        return;
+      }
+      updateData.isFeatured = isFeatured;
+    }
+
+    if (isSticky !== undefined) {
+      if (isSticky && !updateData.isPublished && !article.isPublished) {
+        res.status(400).json({
+          success: false,
+          message: 'Only published articles can be sticky'
+        });
+        return;
+      }
+      updateData.isSticky = isSticky;
+    }
+
+    const updatedArticle = await Article.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    // Populate before returning
+    const populatedArticle = await populateArticle(Article.findById(updatedArticle!._id));
+
+    res.json({
+      success: true,
+      message: 'Article status updated successfully',
+      data: populatedArticle
+    });
+  } catch (error: any) {
+    console.error('Update article status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update article status',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

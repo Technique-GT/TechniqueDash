@@ -4,9 +4,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import articleRoutes from './routes/article.routes';
 import categoryRoutes from './routes/category.routes';
+import subCategoryRoutes from './routes/subCategory.routes'; // Add this import
 import tagRoutes from './routes/tag.routes';
 import userRoutes from './routes/user.routes';
-import mediaRoutes from './routes/media.routes'; // Add this import
+import mediaRoutes from './routes/media.routes';
 
 dotenv.config();
 
@@ -26,9 +27,10 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use('/api/articles', articleRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/sub-categories', subCategoryRoutes); // Add this line
 app.use('/api/tags', tagRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/media', mediaRoutes); // Add this line
+app.use('/api/media', mediaRoutes);
 
 // Simple health check
 app.get('/api/health', (_req, res) => {

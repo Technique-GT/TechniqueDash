@@ -28,8 +28,8 @@ const CollaboratorSchema: Schema = new Schema({
   role: {
     type: String,
     required: [true, 'Role is required'],
-    enum: ['Writer', 'Editor', 'Reviewer', 'Admin'],
-    default: 'Writer'
+    enum: ['Author', 'Editor', 'Reviewer', 'Admin'],
+    default: 'Author'
   },
   status: {
     type: String,
