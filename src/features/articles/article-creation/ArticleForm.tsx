@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { $getRoot, $isParagraphNode, $isTextNode, $isLineBreakNode, $isHeadingNode, $isListNode, $isListItemNode } from "lexical";
+import { $getRoot } from "lexical";
 
 import { Editor } from "@/components/blocks/editor-00/editor";
-import { TagInput } from "@/components/form/tag-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,6 @@ import mediaLibraryData from "@/data/media-library.json";
 import { Category, SubCategory, Tag, Author, Collaborator, SerializedEditorState, FieldErrorKey } from "./types";
 import ArticleSubmission from "./ArticleSubmission";
 
-const API_BASE_URL = 'http://localhost:5050/api';
 
 interface ArticleFormProps {
   categories: Category[];
@@ -335,19 +333,7 @@ export default function ArticleForm({ categories, subcategories, tags, authors, 
       console.error('Error converting Lexical to HTML:', error);
       return '<p></p>';
     }
-  };
-
-  // Alternative approach using Lexical's $getRoot() for more accurate conversion
-  const convertLexicalStateToHtml = (editorState: SerializedEditorState): string => {
-    try {
-      // This would require importing the Lexical editor and parsing the state properly
-      // For now, we'll use the enhanced node-based approach above
-      return convertLexicalToHtml(editorState);
-    } catch (error) {
-      console.error('Error in Lexical state conversion:', error);
-      return convertLexicalToHtml(editorState);
-    }
-  };
+  };  
 
   // Author search and selection functions
   const handleAuthorSearch = (searchTerm: string) => {

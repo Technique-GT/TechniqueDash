@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Play, Pause, Music, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Plus, Edit, Trash2, Play, Pause, Music, Image as  ExternalLink } from "lucide-react";
 
 interface Playlist {
   _id: string;
@@ -146,11 +145,6 @@ export default function SpotifyPlaylistManager() {
   const openCreateDialog = () => {
     resetForm();
     setIsDialogOpen(true);
-  };
-
-  const extractSpotifyId = (url: string) => {
-    const match = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
   };
 
   if (isLoading) {

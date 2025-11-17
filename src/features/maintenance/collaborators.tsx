@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Edit, Trash2, UserPlus, MoreVertical, Mail } from "lucide-react";
+import { Search, Edit, UserPlus, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +78,7 @@ export default function Collaborators() {
     }
   };
 
-  const handleAddCollaborator = async () => {
+const handleAddCollaborator = async () => {
   if (!newCollaborator.name.trim()) {
     setError('Name is required');
     return;
@@ -91,8 +91,6 @@ export default function Collaborators() {
 
   setIsSubmitting(true);
   setError(null);
-
-  console.log('🔄 Sending collaborator data:', newCollaborator);
 
   try {
     const response = await fetch('http://localhost:5050/api/collaborators', {
@@ -107,14 +105,7 @@ export default function Collaborators() {
       }),
     });
 
-    console.log('📡 Response status:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
     const data = await response.json();
-    console.log('📡 Response data:', data);
     
     if (data.success) {
       setSuccess('Collaborator added successfully!');
@@ -130,7 +121,6 @@ export default function Collaborators() {
       }
     }
   } catch (error) {
-    console.error('❌ Error adding collaborator:', error);
     setError('Network error. Please try again.');
   } finally {
     setIsSubmitting(false);
