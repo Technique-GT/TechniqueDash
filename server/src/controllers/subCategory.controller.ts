@@ -491,3 +491,51 @@ export const getSubCategoriesByCategory = async (req: Request, res: Response): P
     });
   }
 };
+
+export const getSubCategoryStats = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const stats = await SubCategory.aggregate([
+      {
+        $lookup: {
+          from: 'articles',
+          localField: '_id',
+          foreignField: 'subcategory',
+          as: 'articles'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          slug: 1,
+          isActive: 1,
+          articleCount: { $size: '$articles' },
+          publishedCount: {
+            $size: {
+              $filter: {
+                input: '$articles',
+                as: 'article',
+                cond: { $eq: ['$$article.isPublished', true] }
+              }
+            }
+          },
+          totalViews: { $sum: '$articles.views' }
+        }
+      },
+      {
+        $sort: { articleCount: -1 }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error: any) {
+    console.error('Get subcategory stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching subcategory statistics',
+      error: error.message
+    });
+  }
+};

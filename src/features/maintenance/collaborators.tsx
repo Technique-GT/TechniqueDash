@@ -79,58 +79,63 @@ export default function Collaborators() {
   };
 
   const handleAddCollaborator = async () => {
-    if (!newCollaborator.name.trim()) {
-      setError('Name is required');
-      return;
+  if (!newCollaborator.name.trim()) {
+    setError('Name is required');
+    return;
+  }
+
+  if (!newCollaborator.title.trim()) {
+    setError('Title is required');
+    return;
+  }
+
+  setIsSubmitting(true);
+  setError(null);
+
+  console.log('🔄 Sending collaborator data:', newCollaborator);
+
+  try {
+    const response = await fetch('http://localhost:5050/api/collaborators', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: newCollaborator.name,
+        title: newCollaborator.title,
+        email: newCollaborator.email || undefined,
+      }),
+    });
+
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    if (!newCollaborator.title.trim()) {
-      setError('Title is required');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const response = await fetch('http://localhost:5050/api/collaborators', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newCollaborator.name,
-          title: newCollaborator.title,
-          email: newCollaborator.email || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+    const data = await response.json();
+    console.log('📡 Response data:', data);
+    
+    if (data.success) {
+      setSuccess('Collaborator added successfully!');
+      await fetchCollaborators();
+      setNewCollaborator({ name: "", title: "", email: "" });
+      setIsDialogOpen(false);
       
-      if (data.success) {
-        setSuccess('Collaborator added successfully!');
-        await fetchCollaborators();
-        setNewCollaborator({ name: "", title: "", email: "" });
-        setIsDialogOpen(false);
-        
-        setTimeout(() => setSuccess(null), 3000);
-      } else {
-        setError(data.message || 'Error adding collaborator');
-        if (data.errors) {
-          setError(data.errors.join(', '));
-        }
+      setTimeout(() => setSuccess(null), 3000);
+    } else {
+      setError(data.message || 'Error adding collaborator');
+      if (data.errors) {
+        setError(data.errors.join(', '));
       }
-    } catch (error) {
-      console.error('Error adding collaborator:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  } catch (error) {
+    console.error('❌ Error adding collaborator:', error);
+    setError('Network error. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleDeleteCollaborator = async (id: string) => {
     if (!confirm('Are you sure you want to delete this collaborator?')) return;

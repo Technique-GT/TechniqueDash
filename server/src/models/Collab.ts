@@ -1,9 +1,15 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICollaborator extends Document {
   name: string;
   title: string;
   email?: string;
+  bio?: string;
+  avatar?: string;
+  socialLinks?: {
+    platform: string;
+    url: string;
+  }[];
   status: 'active' | 'inactive';
   joinDate: Date;
   createdAt: Date;
@@ -27,9 +33,31 @@ const CollaboratorSchema: Schema = new Schema({
     type: String,
     trim: true,
     lowercase: true,
-    sparse: true, // Allows multiple null values
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    sparse: true, // This allows multiple null values
+    validate: {
+      validator: function(v: string) {
+        return !v || /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+      },
+      message: 'Please enter a valid email'
+    }
   },
+  bio: {
+    type: String,
+    maxlength: [500, 'Bio cannot exceed 500 characters']
+  },
+  avatar: {
+    type: String
+  },
+  socialLinks: [{
+    platform: {
+      type: String,
+      required: true
+    },
+    url: {
+      type: String,
+      required: true
+    }
+  }],
   status: {
     type: String,
     enum: ['active', 'inactive'],
@@ -43,8 +71,19 @@ const CollaboratorSchema: Schema = new Schema({
   timestamps: true
 });
 
-// Index for better search performance
+// Remove any compound index that includes email and userId
+// Only keep these simple indexes:
+
+// Index for name searches
 CollaboratorSchema.index({ name: 1 });
+
+// Index for status filtering
 CollaboratorSchema.index({ status: 1 });
 
-export default mongoose.model<ICollaborator>('Collaborator', CollaboratorSchema);
+// Sparse index for email (only indexes documents that have email)
+CollaboratorSchema.index({ email: 1 }, { 
+  sparse: true,
+  unique: false // Remove uniqueness if you want multiple null emails
+});
+
+export default mongoose.model<ICollaborator>('Collaborator', CollaboratorSchema); 

@@ -7,12 +7,15 @@ import {
   updateSubCategory,
   deleteSubCategory,
   hardDeleteSubCategory,
-  getSubCategoriesByCategory
+  getSubCategoriesByCategory,
+  getSubCategoryStats
 } from '../controllers/subCategory.controller';
 
 const router = express.Router();
 
 // Public routes
+router.get('/stats', getSubCategoryStats);
+
 router.get('/', getSubCategories);
 router.get('/category/:categoryId', getSubCategoriesByCategory);
 router.get('/slug/:slug', getSubCategoryBySlug);

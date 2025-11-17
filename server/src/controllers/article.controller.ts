@@ -564,7 +564,9 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
     const updateData: Partial<IArticle> = {};
 
     if (status !== undefined) {
+      // SYNC BOTH FIELDS - This is the key fix!
       updateData.isPublished = status === 'published';
+      updateData.status = status; // Make sure status field is updated
       
       if (status === 'published' && !article.publishedAt) {
         updateData.publishedAt = new Date();

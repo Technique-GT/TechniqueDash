@@ -77,7 +77,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       } else {
         setMessage({
           type: 'error',
-          text: 'Invalid email or password. Use admin@example.com / admin123'
+          text: 'Invalid email or password.'
         });
       }
     } catch (error: any) {

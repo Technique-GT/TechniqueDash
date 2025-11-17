@@ -14,8 +14,12 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
   try {
     const { name, title, email } = req.body;
 
+    console.log('🔍 CREATE COLLABORATOR - Received data:', { name, title, email });
+    console.log('🔍 Request body:', req.body);
+
     // Validate required fields
     if (!name || !name.trim()) {
+      console.log('❌ Name validation failed');
       res.status(400).json({
         success: false,
         message: 'Name is required'
@@ -24,6 +28,7 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
     }
 
     if (!title || !title.trim()) {
+      console.log('❌ Title validation failed');
       res.status(400).json({
         success: false,
         message: 'Title is required'
@@ -31,12 +36,15 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    console.log('🔍 Checking for existing collaborator with name:', name.trim());
+    
     // Check if collaborator with same name already exists
     const existingCollaborator = await Collaborator.findOne({ 
       name: name.trim()
     });
 
     if (existingCollaborator) {
+      console.log('❌ Collaborator with same name already exists:', existingCollaborator._id);
       res.status(409).json({
         success: false,
         message: 'Collaborator with this name already exists'
@@ -44,6 +52,8 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    console.log('🔍 Creating new collaborator...');
+    
     const collaborator: ICollaborator = new Collaborator({
       name: name.trim(),
       title: title.trim(),
@@ -52,7 +62,9 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
       joinDate: new Date()
     });
 
+    console.log('🔍 Saving collaborator to database...');
     await collaborator.save();
+    console.log('✅ Collaborator saved successfully:', collaborator._id);
     
     res.status(201).json({
       success: true,
@@ -60,8 +72,10 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
       data: collaborator
     });
   } catch (error: any) {
+    console.error('❌ ERROR in createCollaborator:', error);
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err: any) => err.message);
+      console.log('❌ Validation errors:', errors);
       res.status(400).json({
         success: false,
         message: 'Validation error',

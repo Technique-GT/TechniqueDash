@@ -58,7 +58,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw, X } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Edit, Trash2, Eye, RefreshCw, X, Star, Pin, Send } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
@@ -160,6 +160,11 @@ export default function ArticleList() {
   const [editAuthorSearch, setEditAuthorSearch] = useState("");
   const [showAuthorResults, setShowAuthorResults] = useState(false);
 
+  // Quick action states
+  const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
+  const [featuringArticle, setFeaturingArticle] = useState<string | null>(null);
+  const [stickingArticle, setStickingArticle] = useState<string | null>(null);
+
   // Fetch articles from backend
   const fetchArticles = async () => {
     try {
@@ -249,6 +254,116 @@ export default function ArticleList() {
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // Quick publish/unpublish
+  // Quick publish/unpublish - FIXED
+const handleQuickPublish = async (article: Article) => {
+  setPublishingArticle(article._id);
+  try {
+    const newIsPublished = !article.isPublished;
+    
+    const response = await fetch(`http://localhost:5050/api/articles/${article._id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        status: newIsPublished ? 'published' : 'draft',
+        isFeatured: newIsPublished ? article.isFeatured : false,
+        isSticky: newIsPublished ? article.isSticky : false
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      setMessage({ 
+        type: 'success', 
+        text: `Article ${newIsPublished ? 'published' : 'unpublished'} successfully!` 
+      });
+      fetchArticles(); // Refresh the list
+    } else {
+      setMessage({ type: 'error', text: result.message || 'Failed to update article status' });
+    }
+  } catch (error) {
+    console.error('Error updating article status:', error);
+    setMessage({ type: 'error', text: 'Network error. Please try again.' });
+  } finally {
+    setPublishingArticle(null);
+  }
+};
+
+// Quick feature/unfeature - FIXED
+const handleQuickFeature = async (article: Article) => {
+  if (article.status !== 'published') {
+    setMessage({ type: 'error', text: 'Only published articles can be featured' });
+    return;
+  }
+
+  setFeaturingArticle(article._id);
+  try {
+    const response = await fetch(`http://localhost:5050/api/articles/${article._id}/featured`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // No body needed - it's a toggle
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      setMessage({ 
+        type: 'success', 
+        text: `Article ${!article.isFeatured ? 'featured' : 'unfeatured'} successfully!` 
+      });
+      fetchArticles(); // Refresh the list
+    } else {
+      setMessage({ type: 'error', text: result.message || 'Failed to update featured status' });
+    }
+  } catch (error) {
+    console.error('Error updating featured status:', error);
+    setMessage({ type: 'error', text: 'Network error. Please try again.' });
+  } finally {
+    setFeaturingArticle(null);
+  }
+};
+
+// Quick sticky/unsticky - FIXED
+const handleQuickSticky = async (article: Article) => {
+  if (article.status !== 'published') {
+    setMessage({ type: 'error', text: 'Only published articles can be pinned' });
+    return;
+  }
+
+  setStickingArticle(article._id);
+  try {
+    const response = await fetch(`http://localhost:5050/api/articles/${article._id}/sticky`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // No body needed - it's a toggle
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      setMessage({ 
+        type: 'success', 
+        text: `Article ${!article.isSticky ? 'pinned' : 'unpinned'} successfully!` 
+      });
+      fetchArticles(); // Refresh the list
+    } else {
+      setMessage({ type: 'error', text: result.message || 'Failed to update sticky status' });
+    }
+  } catch (error) {
+    console.error('Error updating sticky status:', error);
+    setMessage({ type: 'error', text: 'Network error. Please try again.' });
+  } finally {
+    setStickingArticle(null);
+  }
+};
 
   // Handle editing an article - full modal
   const handleEdit = async (article: Article) => {
@@ -568,6 +683,7 @@ export default function ArticleList() {
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Views</TableHead>
+                      <TableHead className="text-center">Quick Actions</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -575,7 +691,25 @@ export default function ArticleList() {
                     {filteredArticles.map((article) => (
                       <TableRow key={article._id}>
                         <TableCell className="font-medium max-w-xs truncate">
-                          {article.title}
+                          <div className="flex items-center gap-2">
+                            {article.title}
+                            {article.isFeatured && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>Featured</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {article.isSticky && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Pin className="w-4 h-4 text-blue-500 fill-blue-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>Pinned</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -609,6 +743,97 @@ export default function ArticleList() {
                         </TableCell>
                         <TableCell>{formatDate(article.createdAt)}</TableCell>
                         <TableCell>{article.views}</TableCell>
+                        
+                        {/* Quick Actions Column */}
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-1">
+                            {/* Publish/Unpublish Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleQuickPublish(article)}
+                                  disabled={publishingArticle === article._id}
+                                  className={cn(
+                                    "h-8 w-8",
+                                    article.status === 'published' 
+                                      ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                                      : "text-gray-500 hover:text-gray-700"
+                                  )}
+                                >
+                                  {publishingArticle === article._id ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {article.status === 'published' ? 'Unpublish' : 'Publish'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Feature/Unfeature Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleQuickFeature(article)}
+                                  disabled={featuringArticle === article._id || article.status !== 'published'}
+                                  className={cn(
+                                    "h-8 w-8",
+                                    article.isFeatured 
+                                      ? "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50" 
+                                      : "text-gray-500 hover:text-gray-700",
+                                    article.status !== 'published' && "opacity-50 cursor-not-allowed"
+                                  )}
+                                >
+                                  {featuringArticle === article._id ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Star className={cn("w-3 h-3", article.isFeatured && "fill-current")} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {article.isFeatured ? 'Unfeature' : 'Feature'}
+                                {article.status !== 'published' && ' (Published only)'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Sticky/Unsticky Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleQuickSticky(article)}
+                                  disabled={stickingArticle === article._id || article.status !== 'published'}
+                                  className={cn(
+                                    "h-8 w-8",
+                                    article.isSticky 
+                                      ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                                      : "text-gray-500 hover:text-gray-700",
+                                    article.status !== 'published' && "opacity-50 cursor-not-allowed"
+                                  )}
+                                >
+                                  {stickingArticle === article._id ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Pin className={cn("w-3 h-3", article.isSticky && "fill-current")} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {article.isSticky ? 'Unpin' : 'Pin to top'}
+                                {article.status !== 'published' && ' (Published only)'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
+
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -626,6 +851,37 @@ export default function ArticleList() {
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
+                              
+                              {/* Add quick actions to dropdown menu as well */}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleQuickPublish(article)}
+                                disabled={publishingArticle === article._id}
+                              >
+                                {publishingArticle === article._id ? (
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4 mr-2" />
+                                )}
+                                {article.status === 'published' ? 'Unpublish' : 'Publish'}
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuItem 
+                                onClick={() => handleQuickFeature(article)}
+                                disabled={featuringArticle === article._id || article.status !== 'published'}
+                              >
+                                <Star className={cn("w-4 h-4 mr-2", article.isFeatured && "fill-current")} />
+                                {article.isFeatured ? 'Unfeature' : 'Feature'}
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuItem 
+                                onClick={() => handleQuickSticky(article)}
+                                disabled={stickingArticle === article._id || article.status !== 'published'}
+                              >
+                                <Pin className={cn("w-4 h-4 mr-2", article.isSticky && "fill-current")} />
+                                {article.isSticky ? 'Unpin' : 'Pin to top'}
+                              </DropdownMenuItem>
+
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"

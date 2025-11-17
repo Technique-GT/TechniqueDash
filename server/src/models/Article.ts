@@ -114,6 +114,15 @@ ArticleSchema.pre('save', function (next) {
     (this as any).isSticky = false;
   }
 
+  // ADD THIS SIMPLE FIX: Sync status with isPublished
+  if (this.isModified('isPublished')) {
+    if (this.isPublished) {
+      (this as any).status = 'published';
+    } else {
+      (this as any).status = 'draft';
+    }
+  }
+
   next();
 });
 
