@@ -12,45 +12,51 @@ const toObjectId = (id: string | undefined): mongoose.Types.ObjectId | null => {
 
 export const createCollaborator = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, role } = req.body;
-    const userId = (req as any).user?.id; // Assuming you have authentication middleware
+    const { name, title, email } = req.body;
 
-    if (!userId) {
-      res.status(401).json({
+    // Validate required fields
+    if (!name || !name.trim()) {
+      res.status(400).json({
         success: false,
-        message: 'User not authenticated'
+        message: 'Name is required'
       });
       return;
     }
 
-    // Check if collaborator already exists for this user
+    if (!title || !title.trim()) {
+      res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+      return;
+    }
+
+    // Check if collaborator with same name already exists
     const existingCollaborator = await Collaborator.findOne({ 
-      email: email.toLowerCase(), 
-      userId: new mongoose.Types.ObjectId(userId) 
+      name: name.trim()
     });
 
     if (existingCollaborator) {
       res.status(409).json({
         success: false,
-        message: 'Collaborator with this email already exists'
+        message: 'Collaborator with this name already exists'
       });
       return;
     }
 
     const collaborator: ICollaborator = new Collaborator({
-      name,
-      email: email.toLowerCase(),
-      role: role || 'Author',
-      status: 'pending',
-      joinDate: new Date(),
-      userId: new mongoose.Types.ObjectId(userId)
+      name: name.trim(),
+      title: title.trim(),
+      email: email ? email.toLowerCase().trim() : undefined,
+      status: 'active',
+      joinDate: new Date()
     });
 
     await collaborator.save();
     
     res.status(201).json({
       success: true,
-      message: 'Collaborator invitation sent successfully',
+      message: 'Collaborator added successfully',
       data: collaborator
     });
   } catch (error: any) {
@@ -60,11 +66,6 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
         success: false,
         message: 'Validation error',
         errors
-      });
-    } else if (error.code === 11000) {
-      res.status(409).json({
-        success: false,
-        message: 'Collaborator with this email already exists'
       });
     } else {
       res.status(500).json({
@@ -78,24 +79,16 @@ export const createCollaborator = async (req: Request, res: Response): Promise<v
 
 export const getCollaborators = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const { search, status } = req.query;
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    let query: any = { userId: new mongoose.Types.ObjectId(userId) };
+    let query: any = {};
 
     // Add search filter
     if (search && typeof search === 'string') {
       const searchRegex = new RegExp(search, 'i');
       query.$or = [
         { name: searchRegex },
+        { title: searchRegex },
         { email: searchRegex }
       ];
     }
@@ -125,7 +118,6 @@ export const getCollaborators = async (req: Request, res: Response): Promise<voi
 
 export const getCollaboratorById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
 
     if (!objectId) {
@@ -136,18 +128,7 @@ export const getCollaboratorById = async (req: Request, res: Response): Promise<
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    const collaborator = await Collaborator.findOne({ 
-      _id: objectId, 
-      userId: new mongoose.Types.ObjectId(userId) 
-    });
+    const collaborator = await Collaborator.findById(objectId);
     
     if (!collaborator) {
       res.status(404).json({
@@ -172,9 +153,8 @@ export const getCollaboratorById = async (req: Request, res: Response): Promise<
 
 export const updateCollaborator = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
-    const { name, role, status } = req.body;
+    const { name, title, email, status } = req.body;
 
     if (!objectId) {
       res.status(400).json({
@@ -184,21 +164,16 @@ export const updateCollaborator = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
     const updateData: any = {};
-    if (name) updateData.name = name;
-    if (role) updateData.role = role;
+    if (name) updateData.name = name.trim();
+    if (title) updateData.title = title.trim();
+    if (email !== undefined) {
+      updateData.email = email ? email.toLowerCase().trim() : undefined;
+    }
     if (status) updateData.status = status;
 
-    const collaborator = await Collaborator.findOneAndUpdate(
-      { _id: objectId, userId: new mongoose.Types.ObjectId(userId) },
+    const collaborator = await Collaborator.findByIdAndUpdate(
+      objectId,
       updateData,
       { new: true, runValidators: true }
     );
@@ -236,7 +211,6 @@ export const updateCollaborator = async (req: Request, res: Response): Promise<v
 
 export const deleteCollaborator = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
 
     if (!objectId) {
@@ -247,18 +221,7 @@ export const deleteCollaborator = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    const collaborator = await Collaborator.findOneAndDelete({ 
-      _id: objectId, 
-      userId: new mongoose.Types.ObjectId(userId) 
-    });
+    const collaborator = await Collaborator.findByIdAndDelete(objectId);
     
     if (!collaborator) {
       res.status(404).json({
@@ -283,7 +246,6 @@ export const deleteCollaborator = async (req: Request, res: Response): Promise<v
 
 export const updateCollaboratorStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.id;
     const objectId = toObjectId(req.params.id);
     const { status } = req.body;
 
@@ -295,24 +257,16 @@ export const updateCollaboratorStatus = async (req: Request, res: Response): Pro
       return;
     }
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    if (!status || !['active', 'pending', 'inactive'].includes(status)) {
+    if (!status || !['active', 'inactive'].includes(status)) {
       res.status(400).json({
         success: false,
-        message: 'Valid status is required (active, pending, or inactive)'
+        message: 'Valid status is required (active or inactive)'
       });
       return;
     }
 
-    const collaborator = await Collaborator.findOneAndUpdate(
-      { _id: objectId, userId: new mongoose.Types.ObjectId(userId) },
+    const collaborator = await Collaborator.findByIdAndUpdate(
+      objectId,
       { status },
       { new: true, runValidators: true }
     );
@@ -334,60 +288,6 @@ export const updateCollaboratorStatus = async (req: Request, res: Response): Pro
     res.status(500).json({
       success: false,
       message: 'Error updating collaborator status',
-      error: error.message
-    });
-  }
-};
-
-export const resendInvitation = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = (req as any).user?.id;
-    const objectId = toObjectId(req.params.id);
-
-    if (!objectId) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid collaborator ID'
-      });
-      return;
-    }
-
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
-
-    const collaborator = await Collaborator.findOne({ 
-      _id: objectId, 
-      userId: new mongoose.Types.ObjectId(userId) 
-    });
-
-    if (!collaborator) {
-      res.status(404).json({
-        success: false,
-        message: 'Collaborator not found'
-      });
-      return;
-    }
-
-    // Here you would typically send an email invitation
-    // For now, we'll just update the status to pending and update the join date
-    collaborator.status = 'pending';
-    collaborator.joinDate = new Date();
-    await collaborator.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Invitation resent successfully',
-      data: collaborator
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: 'Error resending invitation',
       error: error.message
     });
   }

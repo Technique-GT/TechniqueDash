@@ -8,6 +8,7 @@ export interface IArticle extends Document {
   subcategory?: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
   authors: mongoose.Types.ObjectId[];
+  collaborators: mongoose.Types.ObjectId[];
   featuredMedia: {
     id: string;
     url: string;
@@ -32,7 +33,6 @@ const ArticleSchema: Schema = new Schema({
   content: { type: String, required: true },
   excerpt: { type: String, required: true, maxlength: 300 },
   
-  // ✅ Changed from String to ObjectId with ref
   category: { 
     type: Schema.Types.ObjectId, 
     ref: 'Category',
@@ -52,15 +52,17 @@ const ArticleSchema: Schema = new Schema({
     ref: 'User',
     required: true 
   }],
+  collaborators: [{ 
+    type: Schema.Types.ObjectId, 
+    ref: 'Collaborator'
+  }],
 
-  // Unified media representation
   featuredMedia: {
     id: { type: String },
     url: { type: String },
     alt: { type: String, default: '' }
   },
 
-  // Legacy support for "featuredImage"
   featuredImage: {
     type: Schema.Types.Mixed,
     required: false
@@ -76,7 +78,6 @@ const ArticleSchema: Schema = new Schema({
   slug: { type: String, unique: true, sparse: true },
   views: { type: Number, default: 0 },
 
-  // Legacy support for "viewCount"
   viewCount: { type: Number, default: 0 },
 
   seoTitle: { type: String, maxlength: 60 },

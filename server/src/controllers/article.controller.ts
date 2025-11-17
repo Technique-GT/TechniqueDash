@@ -11,6 +11,7 @@ interface CreateArticleRequest extends Request {
     subcategory: string;
     tags: string[];
     authors: string[];
+    collaborators: string[];
     featuredMediaId: string;
     featuredMediaUrl: string;
     isPublished: boolean;
@@ -45,7 +46,8 @@ const populateArticle = (query: any) => {
     .populate('category', 'name slug description isActive')
     .populate('subcategory', 'name slug description isActive')
     .populate('tags', 'name slug color description isActive')
-    .populate('authors', 'firstName lastName username email role status');
+    .populate('authors', 'firstName lastName username email role status')
+    .populate('collaborators', 'name title email status joinDate');
 };
 
 export const createArticle = async (req: CreateArticleRequest, res: Response): Promise<void> => {
@@ -58,6 +60,7 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
       subcategory,
       tags,
       authors,
+      collaborators = [],
       featuredMediaId,
       featuredMediaUrl,
       isPublished,
@@ -88,6 +91,7 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
     const subcategoryObjectId = subcategory ? new mongoose.Types.ObjectId(subcategory) : undefined;
     const tagObjectIds = tags.map(id => new mongoose.Types.ObjectId(id));
     const authorObjectIds = authors.map(id => new mongoose.Types.ObjectId(id));
+    const collaboratorObjectIds = collaborators.map(id => new mongoose.Types.ObjectId(id));
 
     // Build article data
     const articleData: Partial<IArticle> = {
@@ -97,6 +101,7 @@ export const createArticle = async (req: CreateArticleRequest, res: Response): P
       category: categoryObjectId as any,
       tags: tagObjectIds as any,
       authors: authorObjectIds as any,
+      collaborators: collaboratorObjectIds as any,
       featuredMedia: {
         id: featuredMediaId,
         url: featuredMediaUrl
@@ -239,6 +244,7 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
       subcategory,
       tags,
       authors,
+      collaborators = [],
       featuredMediaId,
       featuredMediaUrl,
       isPublished,
@@ -257,6 +263,7 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
     const subcategoryObjectId = subcategory ? new mongoose.Types.ObjectId(subcategory) : undefined;
     const tagObjectIds = tags.map(id => new mongoose.Types.ObjectId(id));
     const authorObjectIds = authors.map(id => new mongoose.Types.ObjectId(id));
+    const collaboratorObjectIds = collaborators.map(id => new mongoose.Types.ObjectId(id));
 
     // Build update object
     const updateData: Partial<IArticle> = {
@@ -266,6 +273,7 @@ export const updateArticle = async (req: UpdateArticleRequest, res: Response): P
       category: categoryObjectId as any,
       tags: tagObjectIds as any,
       authors: authorObjectIds as any,
+      collaborators: collaboratorObjectIds as any,
       featuredMedia: {
         id: featuredMediaId,
         url: featuredMediaUrl

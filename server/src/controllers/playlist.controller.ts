@@ -47,7 +47,7 @@ export const createPlaylist = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const getPlaylists = async (req: Request, res: Response): Promise<void> => {
+export const getPlaylists = async (_req: Request, res: Response): Promise<void> => {
   try {
     const playlists = await Playlist.find()
       .sort({ isActive: -1, createdAt: -1 })
@@ -237,7 +237,7 @@ export const setActivePlaylist = async (req: Request, res: Response): Promise<vo
   }
 };
 
-export const getActivePlaylist = async (req: Request, res: Response): Promise<void> => {
+export const getActivePlaylist = async (_req: Request, res: Response): Promise<void> => {
   try {
     const playlist = await Playlist.findOne({ isActive: true });
     
