@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Calendar, Download, Eye, Users, Clock, Share2 } from "lucide-react";
+import { Download, Eye, Users, Clock, Share2 } from "lucide-react";
 
 const siteData = [
   { date: "Jan", visitors: 4000, pageViews: 2400, bounceRate: 30 },
@@ -32,7 +32,7 @@ const trafficSources = [
 
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState("30d");
-  const [selectedArticle, setSelectedArticle] = useState("all");
+  // const [selectedArticle, setSelectedArticle] = useState("all");
 
   return (
     <div className="container mx-auto p-6 space-y-6">

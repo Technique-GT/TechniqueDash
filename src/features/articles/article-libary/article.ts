@@ -7,6 +7,7 @@ export interface PopulatedCategory {
 }
 
 export interface PopulatedSubCategory {
+  category: any;
   _id: string;
   name: string;
   slug: string;

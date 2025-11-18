@@ -1,11 +1,11 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { ArrowRight, PenTool, Newspaper, Users, Award, BookOpen } from "lucide-react"
 import { Navbar } from "@/components/home-bar"
 import { HeroSection } from "@/components/home-hero"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "framer-motion"
+import { ArrowRight, Award, Newspaper, Users } from "lucide-react"
 
 const fadeIn = {
   hidden: { opacity: 0 },

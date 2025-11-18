@@ -40,7 +40,7 @@ import {
   $patchStyleText,
   $setBlocksType,
 } from "@lexical/selection"
-import type { LexicalNode } from "lexical"
+import type { LexicalNode, TextNode } from "lexical"
 import { ElementNode } from "lexical"
 
 import { Button } from "@/components/ui/button"
@@ -277,7 +277,7 @@ export function ToolbarPlugin() {
     const normalizedSize = FONT_SIZES.includes(currentFontSize) ? currentFontSize : "16px"
     setFontSize(normalizedSize)
 
-    let node = anchorNode
+    let node: TextNode | ElementNode | null = anchorNode
     let isLink = false
     while (node != null) {
       if ($isLinkNode(node)) {

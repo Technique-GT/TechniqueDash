@@ -1,4 +1,4 @@
-import { JSX, useEffect, useMemo, useRef, useState } from "react"
+import { JSX, useEffect, useRef, useState } from "react"
 import { ContentEditable as LexicalContentEditable } from "@lexical/react/LexicalContentEditable"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { $getRoot } from "lexical"
@@ -6,18 +6,17 @@ import { $getRoot } from "lexical"
 type Props = {
   placeholder: string
   className?: string
-  placeholderClassName?: string
 }
 
 export function ContentEditable({
   placeholder,
   className,
-  placeholderClassName,
 }: Props): JSX.Element {
   const [editor] = useLexicalComposerContext()
   const [isEmpty, setIsEmpty] = useState(true)
+  isEmpty;
   const editableRef = useRef<HTMLDivElement | null>(null)
-  const [{ top, left, right }, setOffsets] = useState({
+  const [_, setOffsets] = useState({
     top: "0px",
     left: "0px",
     right: "0px",
@@ -65,14 +64,14 @@ export function ContentEditable({
     }
   }, [])
 
-  const placeholderStyle = useMemo(
-    () => ({
-      marginTop: top,
-      paddingLeft: left,
-      paddingRight: right,
-    }),
-    [top, left, right],
-  )
+  // const placeholderStyle = useMemo(
+  //   () => ({
+  //     marginTop: top,
+  //     paddingLeft: left,
+  //     paddingRight: right,
+  //   }),
+  //   [top, left, right],
+  // )
 
   return (
       <LexicalContentEditable
@@ -82,6 +81,7 @@ export function ContentEditable({
           `ContentEditable__root relative block min-h-full overflow-auto px-8 py-4 focus:outline-none`
         }
         aria-placeholder={placeholder}
+        placeholder={(isEditable: boolean) => {isEditable; return null;}}
       />
   )
 }

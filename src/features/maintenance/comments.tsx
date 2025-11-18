@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MessageSquare, Eye, EyeOff, Trash2, FileText, ThumbsUp, ThumbsDown, Reply } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Eye, EyeOff, MessageSquare, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Comment {
   _id: string;
@@ -50,7 +48,6 @@ interface CommentStats {
 }
 
 export default function CommentsManagement() {
-  const [comments, setComments] = useState<Comment[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -97,11 +94,11 @@ export default function CommentsManagement() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      // const data = await response.json();
       
       // For now, let's use mock data since we don't have a "get all comments" endpoint
       // In a real app, you'd create an endpoint like GET /api/comments
-      setComments([]); // Empty for now
+      // setComments([]); // Empty for now
       
     } catch (error: any) {
       console.error('Error fetching comments:', error);
@@ -129,103 +126,103 @@ export default function CommentsManagement() {
     }
   };
 
-  const updateCommentStatus = async (commentId: string, newStatus: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/comments/${commentId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+  // const updateCommentStatus = async (commentId: string, newStatus: string) => {
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/comments/${commentId}/status`, {
+  //       method: 'PATCH',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ status: newStatus }),
+  //     });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
 
-      const data = await response.json();
+  //     const data = await response.json();
       
-      if (data.success) {
-        await fetchComments();
-        await fetchStats();
-      } else {
-        alert(data.message || 'Error updating comment status');
-      }
-    } catch (error: any) {
-      console.error('Error updating comment status:', error);
-      alert(`Error updating comment status: ${error.message}`);
-    }
-  };
+  //     if (data.success) {
+  //       await fetchComments();
+  //       await fetchStats();
+  //     } else {
+  //       alert(data.message || 'Error updating comment status');
+  //     }
+  //   } catch (error: any) {
+  //     console.error('Error updating comment status:', error);
+  //     alert(`Error updating comment status: ${error.message}`);
+  //   }
+  // };
 
-  const deleteComment = async (commentId: string) => {
-    if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) return;
+  // const deleteComment = async (commentId: string) => {
+  //   if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) return;
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, {
-        method: 'DELETE',
-      });
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, {
+  //       method: 'DELETE',
+  //     });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
 
-      const data = await response.json();
+  //     const data = await response.json();
       
-      if (data.success) {
-        await fetchComments();
-        await fetchStats();
-      } else {
-        alert(data.message || 'Error deleting comment');
-      }
-    } catch (error: any) {
-      console.error('Error deleting comment:', error);
-      alert(`Error deleting comment: ${error.message}`);
-    }
-  };
+  //     if (data.success) {
+  //       await fetchComments();
+  //       await fetchStats();
+  //     } else {
+  //       alert(data.message || 'Error deleting comment');
+  //     }
+  //   } catch (error: any) {
+  //     console.error('Error deleting comment:', error);
+  //     alert(`Error deleting comment: ${error.message}`);
+  //   }
+  // };
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'approved': return 'default';
-      case 'pending': return 'secondary';
-      case 'spam': return 'destructive';
-      case 'rejected': return 'outline';
-      default: return 'outline';
-    }
-  };
+  // const getStatusVariant = (status: string) => {
+  //   switch (status) {
+  //     case 'approved': return 'default';
+  //     case 'pending': return 'secondary';
+  //     case 'spam': return 'destructive';
+  //     case 'rejected': return 'outline';
+  //     default: return 'outline';
+  //   }
+  // };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'text-green-600 bg-green-50 border-green-200';
-      case 'pending': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'spam': return 'text-red-600 bg-red-50 border-red-200';
-      case 'rejected': return 'text-gray-600 bg-gray-50 border-gray-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
+  // const getStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'approved': return 'text-green-600 bg-green-50 border-green-200';
+  //     case 'pending': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+  //     case 'spam': return 'text-red-600 bg-red-50 border-red-200';
+  //     case 'rejected': return 'text-gray-600 bg-gray-50 border-gray-200';
+  //     default: return 'text-gray-600 bg-gray-50 border-gray-200';
+  //   }
+  // };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // const getInitials = (name: string) => {
+  //   return name
+  //     .split(' ')
+  //     .map(part => part[0])
+  //     .join('')
+  //     .toUpperCase()
+  //     .slice(0, 2);
+  // };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // const formatDate = (dateString: string) => {
+  //   return new Date(dateString).toLocaleDateString('en-US', {
+  //     year: 'numeric',
+  //     month: 'short',
+  //     day: 'numeric',
+  //     hour: '2-digit',
+  //     minute: '2-digit'
+  //   });
+  // };
 
-  const truncateContent = (content: string, maxLength: number = 100) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
-  };
+  // const truncateContent = (content: string, maxLength: number = 100) => {
+  //   if (content.length <= maxLength) return content;
+  //   return content.substring(0, maxLength) + '...';
+  // };
 
   // For now, using empty array since we don't have the endpoint
   const filteredComments: Comment[] = [];

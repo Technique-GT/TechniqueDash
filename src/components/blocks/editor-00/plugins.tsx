@@ -24,7 +24,7 @@ export function Plugins() {
       <HistoryPlugin />
       <ListPlugin />
       <LinkPlugin />
-      <CharacterCountPlugin limit={5000} />
+      <CharacterCountPlugin />
     </div>
   )
 }
