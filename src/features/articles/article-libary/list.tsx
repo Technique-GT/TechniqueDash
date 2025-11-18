@@ -490,6 +490,8 @@ const handleSaveEdit = async () => {
 
       <ArticleDialogs
         // Edit Dialog
+        editSlug={editSlug}
+        setEditSlug={setEditSlug}
         editDialogOpen={editDialogOpen}
         setEditDialogOpen={setEditDialogOpen}
         currentArticle={currentArticle}
@@ -506,10 +508,6 @@ const handleSaveEdit = async () => {
         editSelectedTags={editSelectedTags}
         editSelectedAuthors={editSelectedAuthors}
         editSelectedCollaborators={editSelectedCollaborators}
-        editFeaturedMediaId={editFeaturedMediaId}
-        setEditFeaturedMediaId={setEditFeaturedMediaId}
-        editFeaturedMediaUrl={editFeaturedMediaUrl}
-        setEditFeaturedMediaUrl={setEditFeaturedMediaUrl}
         editFeaturedMediaAlt={editFeaturedMediaAlt}
         setEditFeaturedMediaAlt={setEditFeaturedMediaAlt}
         editIsPublished={editIsPublished}
@@ -520,10 +518,6 @@ const handleSaveEdit = async () => {
         setEditIsSticky={setEditIsSticky}
         editAllowComments={editAllowComments}
         setEditAllowComments={setEditAllowComments}
-        editSeoTitle={editSeoTitle}
-        setEditSeoTitle={setEditSeoTitle}
-        editSeoDescription={editSeoDescription}
-        setEditSeoDescription={setEditSeoDescription}
         editAuthorSearch={editAuthorSearch}
         setEditAuthorSearch={setEditAuthorSearch}
         showAuthorResults={showAuthorResults}

@@ -134,7 +134,7 @@ export function ArticleDialogs({
   handleTagRemove,
   handleCollaboratorSelect,
   handleCollaboratorRemove,
-  isEditLoading
+  isEditLoading,
 }: ArticleDialogsProps) {
   
   const filteredAuthors = useMemo(() => {
