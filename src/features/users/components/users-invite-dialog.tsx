@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { IconMailPlus, IconSend } from '@tabler/icons-react'
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,12 +25,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { userTypes } from '../data/data'
+import { useUsers } from '../context/users-context'
 
 const formSchema = z.object({
-  email: z.email({
-    error: (iss) =>
-      iss.input === '' ? 'Please enter an email to invite.' : undefined,
-  }),
+  email: z.string().email('Please enter a valid email.'),
   role: z.string().min(1, 'Role is required.'),
   desc: z.string().optional(),
 })
@@ -42,15 +40,43 @@ interface Props {
 }
 
 export function UsersInviteDialog({ open, onOpenChange }: Props) {
+  const { refetchUsers } = useUsers()
+  const [submitting, setSubmitting] = useState(false)
+  
   const form = useForm<UserInviteForm>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', role: '', desc: '' },
   })
 
-  const onSubmit = (values: UserInviteForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const onSubmit = async (values: UserInviteForm) => {
+    setSubmitting(true)
+    try {
+      const API_BASE_URL = 'http://localhost:5050/api'
+      
+      const response = await fetch(`${API_BASE_URL}/users/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: values.email,
+          role: values.role,
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to invite user')
+      }
+      
+      await refetchUsers()
+      form.reset()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to invite user:', error)
+      // You might want to show an error toast here
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -136,8 +162,8 @@ export function UsersInviteDialog({ open, onOpenChange }: Props) {
           <DialogClose asChild>
             <Button variant='outline'>Cancel</Button>
           </DialogClose>
-          <Button type='submit' form='user-invite-form'>
-            Invite <IconSend />
+          <Button type='submit' form='user-invite-form' disabled={submitting}>
+            {submitting ? 'Inviting...' : 'Invite'} <IconSend />
           </Button>
         </DialogFooter>
       </DialogContent>

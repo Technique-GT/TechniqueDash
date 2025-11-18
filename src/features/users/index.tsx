@@ -8,15 +8,32 @@ import { UsersDialogs } from './components/users-dialogs'
 import { UsersPrimaryButtons } from './components/users-primary-buttons'
 import { UsersTable } from './components/users-table'
 import UsersProvider from './context/users-context'
-import { userListSchema } from './data/schema'
-import { users } from './data/users'
+import { useUsers } from './context/users-context'
 
-export default function Users() {
-  // Parse user list
-  const userList = userListSchema.parse(users)
+function UsersContent() {
+  const { users, loading } = useUsers()
+
+  if (loading) {
+    return (
+      <>
+        <Header fixed>
+          <Search />
+          <div className='ml-auto flex items-center space-x-4'>
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">Loading users...</div>
+          </div>
+        </Main>
+      </>
+    )
+  }
 
   return (
-    <UsersProvider>
+    <>
       <Header fixed>
         <Search />
         <div className='ml-auto flex items-center space-x-4'>
@@ -36,11 +53,19 @@ export default function Users() {
           <UsersPrimaryButtons />
         </div>
         <div className='-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-y-0 lg:space-x-12'>
-          <UsersTable data={userList} columns={columns} />
+          <UsersTable data={users} columns={columns} />
         </div>
       </Main>
 
       <UsersDialogs />
+    </>
+  )
+}
+
+export default function Users() {
+  return (
+    <UsersProvider>
+      <UsersContent />
     </UsersProvider>
   )
 }

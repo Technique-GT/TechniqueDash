@@ -11,12 +11,13 @@ export type UserStatus = z.infer<typeof userStatusSchema>
 const userRoleSchema = z.union([
   z.literal('superadmin'),
   z.literal('admin'),
-  z.literal('cashier'),
-  z.literal('manager'),
+  z.literal('writer'),
+  z.literal('editor'),
 ])
 
+// Update to use _id from MongoDB and add id for frontend compatibility
 const userSchema = z.object({
-  id: z.string(),
+  _id: z.string(), // MongoDB _id
   firstName: z.string(),
   lastName: z.string(),
   username: z.string(),
@@ -24,9 +25,10 @@ const userSchema = z.object({
   phoneNumber: z.string(),
   status: userStatusSchema,
   role: userRoleSchema,
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
 })
-export type User = z.infer<typeof userSchema>
+// Create a type that includes both _id and id for frontend compatibility
+export type User = z.infer<typeof userSchema> & { id: string }
 
 export const userListSchema = z.array(userSchema)
