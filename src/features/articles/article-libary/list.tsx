@@ -62,6 +62,11 @@ export default function ArticleList() {
   const [editAuthorSearch, setEditAuthorSearch] = useState("");
   const [showAuthorResults, setShowAuthorResults] = useState(false);
 
+  editFeaturedMediaId;
+  editFeaturedMediaUrl;
+  editSeoTitle;
+  editSeoDescription;
+
   // Quick action states
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
   const [featuringArticle, setFeaturingArticle] = useState<string | null>(null);
