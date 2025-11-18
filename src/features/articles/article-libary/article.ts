@@ -37,24 +37,29 @@ export interface Article {
   _id: string;
   title: string;
   content: string;
-  authors: PopulatedAuthor[];
+  excerpt: string;
   category: PopulatedCategory;
   subcategory?: PopulatedSubCategory;
-  status: "published" | "draft";
-  publishedAt?: string;
-  views: number;
-  excerpt: string;
   tags: PopulatedTag[];
+  authors: PopulatedAuthor[];
+  collaborators: PopulatedAuthor[]; // Assuming collaborators are also authors
   featuredMedia: {
-    id: string;
-    url: string;
-    alt?: string;
+    id?: string;
+    url?: string;
+    alt: string;
   };
+  isPublished: boolean;
   isFeatured: boolean;
   isSticky: boolean;
+  status: "published" | "draft";
   allowComments: boolean;
+  slug: string;
+  views: number;
+  viewCount: number;
   createdAt: string;
   updatedAt: string;
+  publishedAt?: string;
+  seoTitle?: string;
+  seoDescription?: string;
 }
-
 export type MessageType = { type: 'success' | 'error', text: string };

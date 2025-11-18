@@ -8,7 +8,8 @@ import {
   updateCommentStatus,
   likeComment,
   dislikeComment,
-  getCommentStats
+  getCommentStats,
+  getAllComments // Add this import
 } from '../controllers/comment.controller';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.patch('/:id/like', likeComment);
 router.patch('/:id/dislike', dislikeComment);
 
 // Admin routes
+router.get('/', getAllComments); // Add this line - GET all comments
 router.get('/stats', getCommentStats);
 router.get('/:id', getCommentById);
 router.put('/:id', updateComment);

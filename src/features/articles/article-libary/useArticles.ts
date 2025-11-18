@@ -18,24 +18,98 @@ export const useArticles = () => {
   const [authors, setAuthors] = useState<PopulatedAuthor[]>([]);
 
   // Fetch articles from backend
-  const fetchArticles = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5050/api/articles');
-      const result = await response.json();
+  // In useArticles.ts - update the fetchArticles function
+const fetchArticles = async () => {
+  try {
+    setLoading(true);
+    const response = await fetch('http://localhost:5050/api/articles');
+    const result = await response.json();
+    const transformedArticles = result.data.map(transformArticleData);
+        setArticles(transformedArticles);
+    if (result.success) {
+      // Transform MongoDB data to match frontend interface
+      const transformedArticles = result.data.map((article: any) => ({
+        _id: article._id?.$oid || article._id,
+        title: article.title,
+        content: article.content,
+        excerpt: article.excerpt,
+        category: article.category, // This should be populated by backend
+        subcategory: article.subcategory, // This should be populated by backend
+        tags: article.tags || [], // This should be populated by backend
+        authors: article.authors || [], // This should be populated by backend
+        collaborators: article.collaborators || [],
+        featuredMedia: {
+          id: article.featuredMedia?.id || '',
+          url: article.featuredMedia?.url || '',
+          alt: article.featuredMedia?.alt || ''
+        },
+        isPublished: article.status === 'published',
+        isFeatured: article.isFeatured || false,
+        isSticky: article.isSticky || false,
+        status: article.status || 'draft',
+        allowComments: article.allowComments ?? true,
+        slug: article.slug,
+        views: article.views?.$numberInt ? parseInt(article.views.$numberInt) : article.views || 0,
+        viewCount: article.viewCount?.$numberInt ? parseInt(article.viewCount.$numberInt) : article.viewCount || 0,
+        createdAt: article.createdAt?.$date?.$numberLong ? 
+          new Date(parseInt(article.createdAt.$date.$numberLong)).toISOString() : 
+          article.createdAt,
+        updatedAt: article.updatedAt?.$date?.$numberLong ? 
+          new Date(parseInt(article.updatedAt.$date.$numberLong)).toISOString() : 
+          article.updatedAt,
+        publishedAt: article.publishedAt?.$date?.$numberLong ? 
+          new Date(parseInt(article.publishedAt.$date.$numberLong)).toISOString() : 
+          article.publishedAt
+      }));
       
-      if (result.success) {
-        setArticles(result.data);
-      } else {
-        setMessage({ type: 'error', text: 'Failed to fetch articles' });
-      }
-    } catch (error) {
-      console.error('Error fetching articles:', error);
-      setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
-    } finally {
-      setLoading(false);
+      setArticles(transformedArticles);
+    } else {
+      setMessage({ type: 'error', text: 'Failed to fetch articles' });
     }
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add this helper function
+const transformArticleData = (article: any): Article => {
+  return {
+    _id: article._id?.$oid || article._id,
+    title: article.title || '',
+    content: article.content || '',
+    excerpt: article.excerpt || '',
+    category: article.category || { _id: '', name: '', slug: '', isActive: false },
+    subcategory: article.subcategory,
+    tags: article.tags || [],
+    authors: article.authors || [],
+    collaborators: article.collaborators || [],
+    featuredMedia: {
+      id: article.featuredMedia?.id || '',
+      url: article.featuredMedia?.url || '',
+      alt: article.featuredMedia?.alt || ''
+    },
+    isPublished: article.status === 'published',
+    isFeatured: article.isFeatured || false,
+    isSticky: article.isSticky || false,
+    status: article.status || 'draft',
+    allowComments: article.allowComments ?? true,
+    slug: article.slug || '',
+    views: typeof article.views === 'object' ? parseInt(article.views.$numberInt) : article.views || 0,
+    viewCount: typeof article.viewCount === 'object' ? parseInt(article.viewCount.$numberInt) : article.viewCount || 0,
+    createdAt: typeof article.createdAt === 'object' ? 
+      new Date(parseInt(article.createdAt.$date?.$numberLong)).toISOString() : 
+      article.createdAt,
+    updatedAt: typeof article.updatedAt === 'object' ? 
+      new Date(parseInt(article.updatedAt.$date?.$numberLong)).toISOString() : 
+      article.updatedAt,
+    publishedAt: typeof article.publishedAt === 'object' ? 
+      new Date(parseInt(article.publishedAt.$date?.$numberLong)).toISOString() : 
+      article.publishedAt
   };
+};
 
   // Fetch data for edit form
   const fetchEditData = async () => {

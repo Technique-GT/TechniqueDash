@@ -1,14 +1,13 @@
-// /src/server/models/Comment.ts
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IComment extends Document {
   content: string;
-  author: mongoose.Types.ObjectId; // Reference to User
+  author: mongoose.Types.ObjectId;
   article: mongoose.Types.ObjectId;
   parentComment?: mongoose.Types.ObjectId;
   isApproved: boolean;
   isSpam: boolean;
-  isEdited: boolean;
+  isEdited?: boolean;
   likes: number;
   dislikes: number;
   userAgent?: string;

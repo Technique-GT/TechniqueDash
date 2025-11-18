@@ -193,78 +193,88 @@ export default function ArticleList() {
   };
 
   // Edit handlers - UPDATED TO POPULATE ALL FIELDS
-  const handleEdit = async (article: Article) => {
-    setCurrentArticle(article);
-    
-    // Populate edit form with article data
-    setEditTitle(article.title);
-    setEditContent(article.content);
-    setEditExcerpt(article.excerpt);
-    setEditCategory(article.category._id);
-    setEditSubcategory(article.subcategory?._id || "");
-    setEditSelectedTags(article.tags.map(tag => tag._id));
-    setEditSelectedAuthors(article.authors);
-    setEditSelectedCollaborators(article.collaborators?.map(collab => collab._id) || []);
-    setEditFeaturedMediaId(article.featuredMedia?.id || "");
-    setEditFeaturedMediaUrl(article.featuredMedia?.url || "");
-    setEditFeaturedMediaAlt(article.featuredMedia?.alt || "");
-    setEditIsPublished(article.status === 'published');
-    setEditIsFeatured(article.isFeatured);
-    setEditIsSticky(article.isSticky);
-    setEditAllowComments(article.allowComments ?? true);
-    
-    setEditDialogOpen(true);
-  };
+// In your ArticleList.tsx - update the handleEdit function
+const handleEdit = async (article: Article) => {
+  setCurrentArticle(article);
+  
+  // Populate ONLY fields that exist in the schema
+  setEditTitle(article.title);
+  setEditContent(article.content);
+  setEditExcerpt(article.excerpt);
+  setEditCategory(article.category._id);
+  setEditSubcategory(article.subcategory?._id || "");
+  setEditSelectedTags(article.tags.map(tag => tag._id));
+  setEditSelectedAuthors(article.authors);
+  setEditSelectedCollaborators(article.collaborators?.map(collab => collab._id) || []);
+  setEditFeaturedMediaAlt(article.featuredMedia?.alt || "");
+  setEditIsPublished(article.status === 'published');
+  setEditIsFeatured(article.isFeatured);
+  setEditIsSticky(article.isSticky);
+  setEditAllowComments(article.allowComments ?? true);
+  setEditSlug(article.slug);
+  
+  setEditDialogOpen(true);
+};
 
-  const handleSaveEdit = async () => {
-    if (!currentArticle) return;
+// Update the state to remove unused fields and add slug
+const [editSlug, setEditSlug] = useState("");
 
-    try {
-      setIsEditLoading(true);
-      const articleData = {
-        title: editTitle,
-        content: editContent,
-        excerpt: editExcerpt,
-        category: editCategory,
-        subcategory: editSubcategory || undefined,
-        tags: editSelectedTags,
-        authors: editSelectedAuthors.map(author => author._id),
-        collaborators: editSelectedCollaborators,
-        featuredMediaId: editFeaturedMediaId,
-        featuredMediaUrl: editFeaturedMediaUrl,
-        isPublished: editIsPublished,
-        isFeatured: editIsFeatured,
-        isSticky: editIsSticky,
-        allowComments: editAllowComments,
-        seoTitle: editSeoTitle || undefined,
-        seoDescription: editSeoDescription || undefined,
-      };
+// Remove these unused states from your component:
+// editFeaturedMediaId, setEditFeaturedMediaId
+// editFeaturedMediaUrl, setEditFeaturedMediaUrl  
+// editSeoTitle, setEditSeoTitle
+// editSeoDescription, setEditSeoDescription
 
-      const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(articleData),
-      });
+// Update the handleSaveEdit to only send actual schema fields
+const handleSaveEdit = async () => {
+  if (!currentArticle) return;
 
-      const result = await response.json();
+  try {
+    setIsEditLoading(true);
+    const articleData = {
+      title: editTitle,
+      content: editContent,
+      excerpt: editExcerpt,
+      category: editCategory,
+      subcategory: editSubcategory || undefined,
+      tags: editSelectedTags,
+      authors: editSelectedAuthors.map(author => author._id),
+      collaborators: editSelectedCollaborators,
+      featuredMedia: {
+        alt: editFeaturedMediaAlt
+      },
+      status: editIsPublished ? 'published' : 'draft',
+      isFeatured: editIsFeatured,
+      isSticky: editIsSticky,
+      allowComments: editAllowComments,
+      slug: editSlug,
+    };
 
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Article updated successfully!' });
-        fetchArticles();
-        setEditDialogOpen(false);
-        resetEditForm();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Failed to update article' });
-      }
-    } catch (error) {
-      console.error('Error updating article:', error);
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
-    } finally {
-      setIsEditLoading(false);
+    const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(articleData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      setMessage({ type: 'success', text: 'Article updated successfully!' });
+      fetchArticles();
+      setEditDialogOpen(false);
+      resetEditForm();
+    } else {
+      setMessage({ type: 'error', text: result.message || 'Failed to update article' });
     }
-  };
+  } catch (error) {
+    console.error('Error updating article:', error);
+    setMessage({ type: 'error', text: 'Network error. Please try again.' });
+  } finally {
+    setIsEditLoading(false);
+  }
+};
 
   const resetEditForm = () => {
     setEditTitle("");

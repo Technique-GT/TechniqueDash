@@ -24,10 +24,10 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (!author || !author.name || !author.email) {
+    if (!author) {
       res.status(400).json({
         success: false,
-        message: 'Author name and email are required'
+        message: 'Author ID is required'
       });
       return;
     }
@@ -41,11 +41,30 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
     }
 
     // Check if article exists
-    const article = await Article.findById(articleId);
+    const articleObjectId = toObjectId(articleId);
+    if (!articleObjectId) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid article ID'
+      });
+      return;
+    }
+
+    const article = await Article.findById(articleObjectId);
     if (!article) {
       res.status(404).json({
         success: false,
         message: 'Article not found'
+      });
+      return;
+    }
+
+    // Validate author ID
+    const authorObjectId = toObjectId(author);
+    if (!authorObjectId) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid author ID'
       });
       return;
     }
@@ -74,14 +93,11 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
 
     const comment: IComment = new Comment({
       content: content.trim(),
-      author: {
-        name: author.name.trim(),
-        email: author.email.toLowerCase().trim(),
-        avatar: author.avatar || ''
-      },
-      article: new mongoose.Types.ObjectId(articleId),
+      author: authorObjectId,
+      article: articleObjectId,
       parentComment: parentCommentObjectId,
-      status: 'pending', // Default to pending for moderation
+      isApproved: false, // Default to false for moderation
+      isSpam: false,
       userAgent: req.get('User-Agent'),
       ipAddress: req.ip
     });
@@ -89,7 +105,9 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
     await comment.save();
 
     // Populate the comment before returning
-    const populatedComment = await Comment.findById(comment._id);
+    const populatedComment = await Comment.findById(comment._id)
+      .populate('author', 'name email avatar')
+      .populate('article', 'title slug');
 
     res.status(201).json({
       success: true,
@@ -128,11 +146,24 @@ export const getCommentsByArticle = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Build query
+    // Build query based on status filter
     const query: any = { 
-      article: articleObjectId,
-      status: status as string
+      article: articleObjectId
     };
+
+    // Convert status string to boolean conditions
+    if (status === 'approved') {
+      query.isApproved = true;
+      query.isSpam = false;
+    } else if (status === 'pending') {
+      query.isApproved = false;
+      query.isSpam = false;
+    } else if (status === 'spam') {
+      query.isSpam = true;
+    } else if (status === 'rejected') {
+      query.isApproved = false;
+      query.isSpam = false;
+    }
 
     // If not including replies, only get top-level comments
     if (includeReplies === 'false') {
@@ -140,6 +171,9 @@ export const getCommentsByArticle = async (req: Request, res: Response): Promise
     }
 
     const comments = await Comment.find(query)
+      .populate('author', 'name email avatar')
+      .populate('article', 'title slug')
+      .populate('parentComment')
       .populate('replyCount')
       .sort({ createdAt: -1 })
       .lean();
@@ -150,7 +184,11 @@ export const getCommentsByArticle = async (req: Request, res: Response): Promise
 
     // First pass: create a map of all comments
     comments.forEach(comment => {
-      commentMap.set(comment._id.toString(), { ...comment, replies: [] });
+      commentMap.set(comment._id.toString(), { 
+        ...comment, 
+        replies: [],
+        status: comment.isSpam ? 'spam' : comment.isApproved ? 'approved' : 'pending'
+      });
     });
 
     // Second pass: build the tree structure
@@ -195,6 +233,9 @@ export const getCommentById = async (req: Request, res: Response): Promise<void>
     }
 
     const comment = await Comment.findById(objectId)
+      .populate('author', 'name email avatar')
+      .populate('article', 'title slug')
+      .populate('parentComment')
       .populate('replyCount');
     
     if (!comment) {
@@ -221,7 +262,7 @@ export const getCommentById = async (req: Request, res: Response): Promise<void>
 export const updateComment = async (req: Request, res: Response): Promise<void> => {
   try {
     const objectId = toObjectId(req.params.id);
-    const { content, status } = req.body;
+    const { content, isApproved, isSpam } = req.body;
 
     if (!objectId) {
       res.status(400).json({
@@ -236,15 +277,19 @@ export const updateComment = async (req: Request, res: Response): Promise<void> 
       updateData.content = content.trim();
       updateData.isEdited = true;
     }
-    if (status !== undefined) {
-      updateData.status = status;
+    if (isApproved !== undefined) {
+      updateData.isApproved = isApproved;
+    }
+    if (isSpam !== undefined) {
+      updateData.isSpam = isSpam;
     }
 
     const comment = await Comment.findByIdAndUpdate(
       objectId,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('author', 'name email avatar')
+     .populate('article', 'title slug');
 
     if (!comment) {
       res.status(404).json({
@@ -336,11 +381,28 @@ export const updateCommentStatus = async (req: Request, res: Response): Promise<
       return;
     }
 
+    // Convert status string to boolean fields
+    const updateData: any = {};
+    if (status === 'approved') {
+      updateData.isApproved = true;
+      updateData.isSpam = false;
+    } else if (status === 'pending') {
+      updateData.isApproved = false;
+      updateData.isSpam = false;
+    } else if (status === 'spam') {
+      updateData.isApproved = false;
+      updateData.isSpam = true;
+    } else if (status === 'rejected') {
+      updateData.isApproved = false;
+      updateData.isSpam = false;
+    }
+
     const comment = await Comment.findByIdAndUpdate(
       objectId,
-      { status },
+      updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('author', 'name email avatar')
+     .populate('article', 'title slug');
 
     if (!comment) {
       res.status(404).json({
@@ -380,7 +442,8 @@ export const likeComment = async (req: Request, res: Response): Promise<void> =>
       objectId,
       { $inc: { likes: 1 } },
       { new: true }
-    );
+    ).populate('author', 'name email avatar')
+     .populate('article', 'title slug');
 
     if (!comment) {
       res.status(404).json({
@@ -420,7 +483,8 @@ export const dislikeComment = async (req: Request, res: Response): Promise<void>
       objectId,
       { $inc: { dislikes: 1 } },
       { new: true }
-    );
+    ).populate('author', 'name email avatar')
+     .populate('article', 'title slug');
 
     if (!comment) {
       res.status(404).json({
@@ -449,7 +513,19 @@ export const getCommentStats = async (_req: Request, res: Response): Promise<voi
     const stats = await Comment.aggregate([
       {
         $group: {
-          _id: '$status',
+          _id: {
+            $cond: [
+              { $eq: ['$isSpam', true] },
+              'spam',
+              {
+                $cond: [
+                  { $eq: ['$isApproved', true] },
+                  'approved',
+                  'pending'
+                ]
+              }
+            ]
+          },
           count: { $sum: 1 }
         }
       }
@@ -477,6 +553,68 @@ export const getCommentStats = async (_req: Request, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       message: 'Error fetching comment stats',
+      error: error.message
+    });
+  }
+};
+
+export const getAllComments = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { status, page = 1, limit = 50, search } = req.query;
+
+    // Build query
+    const query: any = {};
+
+    // Convert status string to boolean conditions
+    if (status === 'approved') {
+      query.isApproved = true;
+      query.isSpam = false;
+    } else if (status === 'pending') {
+      query.isApproved = false;
+      query.isSpam = false;
+    } else if (status === 'spam') {
+      query.isSpam = true;
+    } else if (status === 'rejected') {
+      query.isApproved = false;
+      query.isSpam = false;
+    }
+
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { content: { $regex: search, $options: 'i' } },
+        { 'author.name': { $regex: search, $options: 'i' } },
+        { 'author.email': { $regex: search, $options: 'i' } },
+        { 'article.title': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const comments = await Comment.find(query)
+      .populate('author', 'name email avatar')
+      .populate('article', 'title slug')
+      .populate('parentComment')
+      .populate('replyCount')
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit))
+      .lean();
+
+    const total = await Comment.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: comments,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching comments',
       error: error.message
     });
   }
