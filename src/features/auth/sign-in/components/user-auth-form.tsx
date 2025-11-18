@@ -163,8 +163,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           </div>
           <div className='relative flex justify-center text-xs mt-2'>
             <span className='bg-background text-muted-foreground px-2 text-center'>
-              Email: admin@example.com<br />
-              Password: admin123
+              Email: <br />
+              Password: 
             </span>
           </div>
         </div>
