@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5050;
 // Basic middleware
 // Update CORS configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://localhost:3000'],
+  origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://localhost:3000','https://technique-dash-5men.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
