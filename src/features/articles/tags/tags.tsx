@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from '../../../config';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +53,7 @@ export default function Tags() {
       if (searchTerm) params.append('search', searchTerm);
       if (showInactive) params.append('isActive', 'false');
 
-      const response = await fetch(`http://localhost:5050/api/tags?${params}`);
+      const response = await fetch(`${API_BASE_URL}/tags?${params}`);
       const data = await response.json();
       
       if (data.success) {
@@ -70,7 +71,7 @@ export default function Tags() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/tags/stats');
+      const response = await fetch(`${API_BASE_URL}/tags/stats`);
       const data = await response.json();
       
       if (data.success) {
@@ -90,8 +91,8 @@ export default function Tags() {
     try {
       setError(null);
       const url = editingTag 
-        ? `http://localhost:5050/api/tags/${editingTag._id}`
-        : 'http://localhost:5050/api/tags';
+        ? `${API_BASE_URL}/tags/${editingTag._id}`
+        : `${API_BASE_URL}/tags`;
       
       const method = editingTag ? 'PUT' : 'POST';
 
@@ -128,7 +129,7 @@ export default function Tags() {
     if (!confirm(`Are you sure you want to ${tag.isActive ? 'deactivate' : 'activate'} this tag?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/tags/${tag._id}`, {
+      const response = await fetch(`${API_BASE_URL}/tags/${tag._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ export default function Tags() {
     if (!confirm('Are you sure you want to permanently delete this tag? This action cannot be undone.')) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/tags/${tagId}/hard`, {
+      const response = await fetch(`${API_BASE_URL}/tags/${tagId}/hard`, {
         method: 'DELETE',
       });
 

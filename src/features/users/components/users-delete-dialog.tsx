@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { API_BASE_URL } from '../../../config'
 import { User } from '../data/schema'
 import { useUsers } from '../context/users-context'
 
@@ -25,8 +26,6 @@ export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
 
     setDeleting(true)
     try {
-      const API_BASE_URL = 'http://localhost:5050/api'
-      
       // Use _id for the API call
       const response = await fetch(`${API_BASE_URL}/users/${currentRow._id}`, {
         method: 'DELETE',

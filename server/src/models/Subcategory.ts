@@ -41,7 +41,7 @@ const SubCategorySchema: Schema = new Schema({
 });
 
 // Indexes for better performance
-SubCategorySchema.index({ slug: 1 });
+// slug already has a unique index via field definition
 SubCategorySchema.index({ isActive: 1 });
 SubCategorySchema.index({ category: 1 });
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Category, SubCategory, Tag, Author, Collaborator } from "./types";
 import ArticleForm from "./ArticleForm";
 
-const API_BASE_URL = 'http://localhost:5050/api';
+import { API_BASE_URL } from '../../../config';
 
 export default function ArticleCreation() {
   // State for fetched data

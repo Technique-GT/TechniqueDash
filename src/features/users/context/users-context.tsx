@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { API_BASE_URL } from '../../../config'
 import useDialogState from '@/hooks/use-dialog-state'
 import { User, userListSchema } from '../data/schema'
 
@@ -25,8 +26,6 @@ export default function UsersProvider({ children }: Props) {
   const [currentRow, setCurrentRow] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
-
-  const API_BASE_URL = 'http://localhost:5050/api'
 
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     try {

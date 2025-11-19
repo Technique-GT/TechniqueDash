@@ -9,6 +9,7 @@ import { useArticles } from "./useArticles";
 import { ArticleTable } from "./ArticleTable";
 import { ArticleDialogs } from "./ArticleDialogs";
 import { Article, PopulatedAuthor } from "./article";
+import { API_BASE_URL } from '../../../config';
 
 export default function ArticleList() {
   const navigate = useNavigate();
@@ -80,7 +81,7 @@ export default function ArticleList() {
   useEffect(() => {
     const fetchCollaborators = async () => {
       try {
-        const response = await fetch('http://localhost:5050/api/collaborators');
+        const response = await fetch(`${API_BASE_URL}/collaborators`);
         const result = await response.json();
         if (result.success) {
           setCollaborators(result.data);
@@ -98,7 +99,7 @@ export default function ArticleList() {
     try {
       const newIsPublished = !article.isPublished;
       
-      const response = await fetch(`http://localhost:5050/api/articles/${article._id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/articles/${article._id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export default function ArticleList() {
 
     setFeaturingArticle(article._id);
     try {
-      const response = await fetch(`http://localhost:5050/api/articles/${article._id}/featured`, {
+      const response = await fetch(`${API_BASE_URL}/articles/${article._id}/featured`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +172,7 @@ export default function ArticleList() {
 
     setStickingArticle(article._id);
     try {
-      const response = await fetch(`http://localhost:5050/api/articles/${article._id}/sticky`, {
+      const response = await fetch(`${API_BASE_URL}/articles/${article._id}/sticky`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +256,7 @@ const handleSaveEdit = async () => {
       slug: editSlug,
     };
 
-    const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
+    const response = await fetch(`${API_BASE_URL}/articles/${currentArticle._id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -314,7 +315,7 @@ const handleSaveEdit = async () => {
     if (!currentArticle) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/articles/${currentArticle._id}`, {
+      const response = await fetch(`${API_BASE_URL}/articles/${currentArticle._id}`, {
         method: 'DELETE',
       });
 

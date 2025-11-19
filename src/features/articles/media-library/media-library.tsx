@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Upload, Search, Image, File, Video, Trash2, Loader2, Download } from "lucide-react";
+import { API_BASE_URL } from '../../../config';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -34,7 +35,7 @@ export default function MediaLibrary() {
   const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE_URL = 'http://localhost:5050/api';
+  
 
   // Fetch media items
   const fetchMedia = async () => {

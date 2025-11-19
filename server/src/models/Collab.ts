@@ -80,10 +80,7 @@ CollaboratorSchema.index({ name: 1 });
 // Index for status filtering
 CollaboratorSchema.index({ status: 1 });
 
-// Sparse index for email (only indexes documents that have email)
-CollaboratorSchema.index({ email: 1 }, { 
-  sparse: true,
-  unique: false // Remove uniqueness if you want multiple null emails
-});
+// Note: email path sets `sparse: true`, which already creates a sparse index
+// No separate schema-level index needed to avoid duplicates
 
 export default mongoose.model<ICollaborator>('Collaborator', CollaboratorSchema); 

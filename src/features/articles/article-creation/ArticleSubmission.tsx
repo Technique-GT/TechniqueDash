@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Author, Collaborator, SerializedEditorState } from "./types";
 
-const API_BASE_URL = 'http://localhost:5050/api';
+import { API_BASE_URL } from '../../../config';
 
 interface ArticleSubmissionProps {
   title: string;

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Eye, EyeOff, MessageSquare, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from '../../config';
 
 interface Comment {
   _id: string;
@@ -61,7 +62,6 @@ export default function CommentsManagement() {
   });
 
   // API base URL - matches your backend
-  const API_BASE_URL = 'http://localhost:5050/api';
 
   // Fetch comments and stats on component mount
   useEffect(() => {

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Play, Pause, Music, Image as  ExternalLink } from "lucide-react";
+import { API_BASE_URL } from '../../config';
 
 interface Playlist {
   _id: string;
@@ -43,7 +44,7 @@ export default function SpotifyPlaylistManager() {
 
   const fetchPlaylists = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/playlists');
+      const response = await fetch(`${API_BASE_URL}/playlists`);
       const data = await response.json();
       if (data.success) {
         setPlaylists(data.data);
@@ -61,8 +62,8 @@ export default function SpotifyPlaylistManager() {
     e.preventDefault();
     
     const url = editingPlaylist 
-      ? `http://localhost:5050/api/playlists/${editingPlaylist._id}`
-      : 'http://localhost:5050/api/playlists';
+      ? `${API_BASE_URL}/playlists/${editingPlaylist._id}`
+      : `${API_BASE_URL}/playlists`;
     
     const method = editingPlaylist ? 'PUT' : 'POST';
 
@@ -91,7 +92,7 @@ export default function SpotifyPlaylistManager() {
     if (!confirm('Are you sure you want to delete this playlist?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/playlists/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/playlists/${id}`, {
         method: 'DELETE',
       });
       
@@ -107,7 +108,7 @@ export default function SpotifyPlaylistManager() {
 
   const handleSetActive = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/playlists/${id}/set-active`, {
+      const response = await fetch(`${API_BASE_URL}/playlists/${id}/set-active`, {
         method: 'PUT',
       });
       

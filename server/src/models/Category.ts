@@ -35,7 +35,7 @@ const CategorySchema: Schema = new Schema({
 });
 
 // Index for better query performance
-CategorySchema.index({ slug: 1 });
+// slug already has a unique index via field definition
 CategorySchema.index({ isActive: 1 });
 
 // Pre-save middleware to generate slug if not provided

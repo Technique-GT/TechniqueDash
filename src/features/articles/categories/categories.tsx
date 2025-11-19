@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Search, Eye, EyeOff, FolderOpen, FolderTree, ChevronDown, ChevronRight } from "lucide-react";
+import { API_BASE_URL } from '../../../config';
 
 interface Category {
   _id: string;
@@ -85,7 +86,7 @@ export default function Categories() {
       if (searchTerm) params.append('search', searchTerm);
       if (showInactive) params.append('isActive', 'false');
 
-      const response = await fetch(`http://localhost:5050/api/categories?${params}`);
+      const response = await fetch(`${API_BASE_URL}/categories?${params}`);
       const data = await response.json();
       
       if (data.success) {
@@ -103,7 +104,7 @@ export default function Categories() {
 
   const fetchSubCategories = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/sub-categories');
+      const response = await fetch(`${API_BASE_URL}/sub-categories`);
       const data = await response.json();
       
       if (data.success) {
@@ -117,8 +118,8 @@ export default function Categories() {
   const fetchStats = async () => {
     try {
       const [categoriesResponse, subCategoriesResponse] = await Promise.all([
-        fetch('http://localhost:5050/api/categories/stats'),
-        fetch('http://localhost:5050/api/sub-categories/stats')
+        fetch(`${API_BASE_URL}/categories/stats`),
+        fetch(`${API_BASE_URL}/sub-categories/stats`)
       ]);
       
       const categoriesData = await categoriesResponse.json();
@@ -148,8 +149,8 @@ export default function Categories() {
     try {
       setError(null);
       const url = editingCategory 
-        ? `http://localhost:5050/api/categories/${editingCategory._id}`
-        : 'http://localhost:5050/api/categories';
+        ? `${API_BASE_URL}/categories/${editingCategory._id}`
+        : `${API_BASE_URL}/categories`;
       
       const method = editingCategory ? 'PUT' : 'POST';
 
@@ -195,8 +196,8 @@ export default function Categories() {
     try {
       setError(null);
       const url = editingSubCategory 
-        ? `http://localhost:5050/api/sub-categories/${editingSubCategory._id}`
-        : 'http://localhost:5050/api/sub-categories';
+        ? `${API_BASE_URL}/sub-categories/${editingSubCategory._id}`
+        : `${API_BASE_URL}/sub-categories`;
       
       const method = editingSubCategory ? 'PUT' : 'POST';
 
@@ -233,7 +234,7 @@ export default function Categories() {
     if (!confirm(`Are you sure you want to ${category.isActive ? 'deactivate' : 'activate'} this category?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/categories/${category._id}`, {
+      const response = await fetch(`${API_BASE_URL}/categories/${category._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +262,7 @@ export default function Categories() {
     if (!confirm(`Are you sure you want to ${subCategory.isActive ? 'deactivate' : 'activate'} this sub-category?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/sub-categories/${subCategory._id}`, {
+      const response = await fetch(`${API_BASE_URL}/sub-categories/${subCategory._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +290,7 @@ export default function Categories() {
     if (!confirm('Are you sure you want to permanently delete this category? This will also delete all associated sub-categories.')) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/categories/${categoryId}/hard`, {
+      const response = await fetch(`${API_BASE_URL}/categories/${categoryId}/hard`, {
         method: 'DELETE',
       });
 
@@ -312,7 +313,7 @@ export default function Categories() {
     if (!confirm('Are you sure you want to permanently delete this sub-category? This action cannot be undone.')) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/sub-categories/${subCategoryId}/hard`, {
+      const response = await fetch(`${API_BASE_URL}/sub-categories/${subCategoryId}/hard`, {
         method: 'DELETE',
       });
 

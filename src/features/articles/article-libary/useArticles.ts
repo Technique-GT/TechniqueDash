@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Article, PopulatedCategory, PopulatedSubCategory, PopulatedTag, PopulatedAuthor, MessageType } from "./article";
 
-const API_BASE_URL = 'http://localhost:5050/api';
+import { API_BASE_URL } from '../../../config';
 
 export const useArticles = () => {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -22,7 +22,7 @@ export const useArticles = () => {
 const fetchArticles = async () => {
   try {
     setLoading(true);
-    const response = await fetch('http://localhost:5050/api/articles');
+    const response = await fetch(`${API_BASE_URL}/articles`);
     const result = await response.json();
     const transformedArticles = result.data.map(transformArticleData);
         setArticles(transformedArticles);

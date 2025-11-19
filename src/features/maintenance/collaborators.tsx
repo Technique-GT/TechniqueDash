@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from '../../config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,7 @@ export default function Collaborators() {
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
 
-      const response = await fetch(`http://localhost:5050/api/collaborators?${params}`);
+      const response = await fetch(`${API_BASE_URL}/collaborators?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -93,7 +94,7 @@ const handleAddCollaborator = async () => {
   setError(null);
 
   try {
-    const response = await fetch('http://localhost:5050/api/collaborators', {
+    const response = await fetch(`${API_BASE_URL}/collaborators`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ const handleAddCollaborator = async () => {
     if (!confirm('Are you sure you want to delete this collaborator?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/collaborators/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/collaborators/${id}`, {
         method: 'DELETE',
       });
 
@@ -156,7 +157,7 @@ const handleAddCollaborator = async () => {
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/collaborators/${id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/collaborators/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -205,7 +206,7 @@ const handleAddCollaborator = async () => {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:5050/api/collaborators/${editingCollaborator._id}`, {
+      const response = await fetch(`${API_BASE_URL}/collaborators/${editingCollaborator._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

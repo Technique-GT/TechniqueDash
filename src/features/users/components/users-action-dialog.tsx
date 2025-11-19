@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
+import { API_BASE_URL } from '../../../config'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -113,8 +114,6 @@ export function UsersActionDialog({ currentRow, open, onOpenChange }: Props) {
   const onSubmit = async (values: UserForm) => {
     setSubmitting(true)
     try {
-      const API_BASE_URL = 'http://localhost:5050/api'
-      
       if (isEdit && currentRow) {
         // Update user - use _id from backend
         const userData = {

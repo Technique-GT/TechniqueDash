@@ -41,7 +41,7 @@ const TagSchema: Schema = new Schema({
 });
 
 // Index for better query performance
-TagSchema.index({ slug: 1 });
+// slug already has a unique index via field definition
 TagSchema.index({ isActive: 1 });
 
 // Pre-save middleware to generate slug

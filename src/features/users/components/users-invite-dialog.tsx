@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { userTypes } from '../data/data'
 import { useUsers } from '../context/users-context'
+import { API_BASE_URL } from '../../../config'
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email.'),
@@ -51,8 +52,6 @@ export function UsersInviteDialog({ open, onOpenChange }: Props) {
   const onSubmit = async (values: UserInviteForm) => {
     setSubmitting(true)
     try {
-      const API_BASE_URL = 'http://localhost:5050/api'
-      
       const response = await fetch(`${API_BASE_URL}/users/invite`, {
         method: 'POST',
         headers: {
