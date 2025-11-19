@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import Media from '../models/Media';
 
@@ -17,7 +16,8 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (_req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+    const uuid = require('uuid');
+    const uniqueName = `${uuid.v4()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
